@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+tests/
+*.py[cod]
+*.pyo
+*.pyd
+.env
+.env.*
+.git/
+.gitignore
+Dockerfile
+README.md

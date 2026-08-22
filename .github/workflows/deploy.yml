@@ -1,0 +1,47 @@
+name: Deploy to Azure
+
+on:
+  workflow_run:
+    workflows: ['Backend CI']
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: azd up
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME || 'prod' }}
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'koreacentral' }}
+      LLM_MODE: ${{ vars.LLM_MODE || 'copilot' }}
+      COPILOT_MODEL: ${{ vars.COPILOT_MODEL || '' }}
+      GH_COPILOT_TOKEN: ${{ secrets.GH_COPILOT_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+      - name: Install azd
+        uses: Azure/setup-azd@v2
+      - name: Authenticate azd
+        run: azd auth login --client-id "$AZURE_CLIENT_ID" --federated-credential-provider github --tenant-id "$AZURE_TENANT_ID"
+      - name: Provision and deploy
+        run: |
+          azd env new "$AZURE_ENV_NAME" --location "$AZURE_LOCATION" --subscription "$AZURE_SUBSCRIPTION_ID" --no-prompt
+          azd env set LLM_MODE "$LLM_MODE"
+          azd env set COPILOT_MODEL "$COPILOT_MODEL"
+          azd env set GH_COPILOT_TOKEN "$GH_COPILOT_TOKEN"
+          azd up --no-prompt

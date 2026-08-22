@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: mat-copilot
+metadata:
+  template: mat-copilot@0.1.0
+infra:
+  provider: bicep
+  path: infra
+services:
+  backend:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: backend/Dockerfile
+      context: .

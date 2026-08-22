@@ -203,23 +203,44 @@ def create_app(settings: Settings | None = None, runtime=None) -> FastAPI:
     # --- 프론트 정적 서빙 (TRD §12.1 단일 앱) ---
 
     static_dir = settings.resolved_static_dir()
-    if static_dir:
-        index_html = static_dir / "index.html"
+    index_html = (static_dir / "index.html") if static_dir else None
+    if static_dir and index_html is not None and index_html.is_file():
+        static_root = static_dir.resolve()
+        # index.html은 항상 재검증(배포 직후 구버전 셸 방지), Vite 해시 자산은 불변 캐시
+        no_cache = {"Cache-Control": "no-cache"}
+        immutable = {"Cache-Control": "public, max-age=31536000, immutable"}
 
         @app.get("/{full_path:path}", include_in_schema=False)
         async def spa(full_path: str):
-            candidate = (static_dir / full_path).resolve()
-            if candidate.is_file() and candidate.is_relative_to(static_dir.resolve()):
-                return FileResponse(candidate)
-            return FileResponse(index_html)  # SPA 라우팅 폴백
+            # 미등록 API 경로는 SPA로 새지 않고 오류 계약(JSON 404)을 지킨다 (SCHEMA §5)
+            if full_path == "api" or full_path.startswith("api/"):
+                raise StarletteHTTPException(status_code=404, detail="Not Found")
+            candidate = (static_root / full_path).resolve()
+            if candidate.is_relative_to(static_root) and candidate.is_file():
+                headers = immutable if full_path.startswith("assets/") else no_cache
+                return FileResponse(candidate, headers=headers)
+            if full_path.startswith("assets/"):
+                # 재배포로 사라진 해시 자산 — HTML 폴백은 nosniff와 충돌하므로 404
+                raise StarletteHTTPException(status_code=404, detail="Not Found")
+            return FileResponse(index_html, headers=no_cache)  # SPA 라우팅 폴백
 
         log_event(logger, "static_mounted", dir=str(static_dir))
+    elif settings.static_dir:
+        logger.warning(
+            "STATIC_DIR=%s 이 없거나 index.html이 없어 정적 서빙을 건너뜁니다", settings.static_dir
+        )
 
     return app
 
 
+_app_singleton = None
+
+
 def __getattr__(name: str):
-    # uvicorn app.main:app — 지연 생성 (테스트 임포트 시 불필요한 앱 생성 방지)
+    # uvicorn app.main:app — 지연 생성·캐싱 (매 접근마다 새 앱/저장소가 만들어지면 세션이 유실됨)
     if name == "app":
-        return create_app()
+        global _app_singleton
+        if _app_singleton is None:
+            _app_singleton = create_app()
+        return _app_singleton
     raise AttributeError(name)
