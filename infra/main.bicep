@@ -26,6 +26,9 @@ param copilotModel string = ''
 @description('GitHub/Copilot token injected as a Container Apps secret.')
 param ghCopilotToken string
 
+@description('Existing Container Apps Environment resource ID to reuse (subscription quota: 1 CAE). Empty = create new.')
+param existingContainerAppsEnvId string = ''
+
 @description('Maximum active in-memory sessions.')
 param maxActiveSessions int = 500
 
@@ -127,7 +130,7 @@ resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/container
   }
 }
 
-resource managedEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
+resource managedEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = if (empty(existingContainerAppsEnvId)) {
   name: containerAppsEnvName
   location: location
   tags: tags
@@ -142,12 +145,16 @@ resource managedEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
   }
 }
 
+var managedEnvironmentId = empty(existingContainerAppsEnvId)
+  ? managedEnvironment.id
+  : existingContainerAppsEnvId
+
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: containerAppName
   location: location
   tags: serviceTags
   properties: {
-    managedEnvironmentId: managedEnvironment.id
+    managedEnvironmentId: managedEnvironmentId
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
@@ -156,7 +163,18 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: targetPort
         transport: 'auto'
       }
+      registries: [
+        {
+          server: acr.properties.loginServer
+          username: acr.name
+          passwordSecretRef: 'acr-password'
+        }
+      ]
       secrets: [
+        {
+          name: 'acr-password'
+          value: acr.listCredentials().passwords[0].value
+        }
         {
           name: 'azure-storage-connection-string'
           value: storageConnectionString

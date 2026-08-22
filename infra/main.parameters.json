@@ -6,6 +6,7 @@
     "location": { "value": "${AZURE_LOCATION}" },
     "llmMode": { "value": "${LLM_MODE}" },
     "copilotModel": { "value": "${COPILOT_MODEL}" },
-    "ghCopilotToken": { "value": "${GH_COPILOT_TOKEN}" }
+    "ghCopilotToken": { "value": "${GH_COPILOT_TOKEN}" },
+    "existingContainerAppsEnvId": { "value": "${EXISTING_CAE_ID=}" }
   }
 }
