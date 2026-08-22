@@ -5,7 +5,7 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 문서 버전 | v0.1 (Draft) |
+| 문서 버전 | v0.2 (Draft) |
 | 문서 상태 | Draft |
 | 작성자 | @sw1029 |
 | 검토자 | 프론트엔드 / 백엔드 / AI / QA 담당자 (지정 예정) |
@@ -23,12 +23,13 @@
 
 ### 1.1 목적
 
-이 TRD는 PRD/front.md에 정의된 4단계 화면 흐름(홈/첫 질문 → 연속 질의 마인드맵 → 문서 생성 대기 → 분석 결과)을 구현하기 위한 기술 스택, 아키텍처, 상태 모델, API 계약, 컴포넌트 설계, 품질 기준을 확정하여 프론트엔드 개발팀에 단일 구현 기준을 제공한다. 특히 다음 기술적 의사결정을 문서화한다.
+이 TRD는 PRD/front.md에 정의된 5단계 화면 흐름(홈/첫 질문(+선택 문서 업로드) → 연속 질의 마인드맵 → 최종 결과물 제출 → 문서 생성 대기 → 분석 결과)을 구현하기 위한 기술 스택, 아키텍처, 상태 모델, API 계약, 컴포넌트 설계, 품질 기준을 확정하여 프론트엔드 개발팀에 단일 구현 기준을 제공한다. 특히 다음 기술적 의사결정을 문서화한다.
 
 - 가변 길이 질문 그래프를 렌더링하는 캔버스 구현 방식
-- 비동기 생성/분석 작업의 상태 수신·복구 전략
-- PRD·TRD 문서 각주와 시각화·리포트의 교차 강조(선택 동기화) 설계
+- 비동기 생성/분석 작업의 상태 수신·복구 전략 (TRD 생성 단계는 백엔드 판단에 따라 조건부 포함)
+- PRD와 비교 대상(TRD 또는 최종 결과물) 각주와 시각화·리포트의 교차 강조(선택 동기화) 설계
 - 전체 화면 고정 셸에서의 독립 스크롤·드래그 이벤트 분리
+- 선택형 계획 문서 업로드·전처리 상태 표시와 최종 결과물 제출 흐름
 
 ### 1.2 구현 범위
 
@@ -42,6 +43,8 @@
 | In Scope | 30:70 결과 레이아웃, 문서 렌더링, 각주, 교차 강조 | FR-11 ~ FR-14, US-5 | M3 |
 | In Scope | 분석 지표 시각화, 상세 리포트 | FR-15, FR-16, US-6, US-7 | M3 |
 | In Scope | 오류·재시도, 문서 다운로드, 빈 상태 | FR-17 ~ FR-19, US-8 | M2~M4 |
+| In Scope | 계획 문서 업로드·전처리 상태 표시 | FR-21, US-10 | M1 |
+| In Scope | 최종 결과물 제출 화면·TRD 조건부 표시 | FR-22, US-11 | M2 |
 | In Scope | 접근성(키보드 전 흐름), 관측성, 성능 최적화 | US-9, NFR 전반 | M4 |
 | Out of Scope | LLM 추론, 문서 비교, 토큰 산정 로직 | NG-1 | 백엔드 책임 |
 | Out of Scope | PRD·TRD 편집기, 공동 편집, 버전 관리 | NG-2 | 후속 검토 |
@@ -56,7 +59,7 @@
 | CON-01 | PRD 제약 | React 기반 웹 애플리케이션으로 구현 | 스택 선정의 기준점 | 확정 |
 | CON-02 | PRD 제약 | 화면 전체 고정, 챗봇 캔버스만 드래그 | 뷰포트 고정 셸 + 내부 스크롤/드래그 분리 설계 필요 | 확정 |
 | CON-03 | PRD 제약 | 질문 개수·깊이를 프론트에서 제한·가정하지 않음 | 그래프 가상화 및 동적 레이아웃 필요 | 확정 |
-| CON-04 | PRD 제약 | 결과 화면 좌 30% / 우 70%, 우측 상 70% / 하 30% | 레이아웃 상수화, 최소 해상도 1280×720 검증 | 확정 |
+| CON-04 | PRD 제약 | 결과 화면 좌 30% / 우 70%, 우측 상 40%(지표, 스크롤 없음) / 하 60%(리포트) | 레이아웃 상수화, 최소 해상도 1280×720 검증 | 확정 |
 | CON-05 | SCHEMA 제약 | REST + JSON, `X-Session-Token` 헤더, 폴링 2초 권장 | API 클라이언트 공통 인터셉터 설계 | 확정 |
 | ASM-01 | 가정 | 백엔드가 질문의 고유 ID·부모 관계·종료 신호를 일관 제공 | 어긋나면 그래프 렌더링 불가 → 계약 테스트로 방지 | 확정 (SCHEMA §2) |
 | ASM-02 | 가정 | 비교 결과에 양쪽 문서의 안정적 위치 식별자 포함 | 미제공 시 각주 매핑 실패 상태 표시로 강등 | 확인 필요 (SCHEMA 보류) |
@@ -64,16 +67,21 @@
 | ASM-04 | 가정 | 생성 작업은 비동기이며 jobId로 상태 재조회 가능 | 새로고침 복구 설계의 전제 | 확정 (SCHEMA API-11) |
 | ASM-05 | 가정 | 분석 완료 후 동일 sessionId로 재접근 가능 | 결과 화면 직접 진입/복구 지원 | 확정 (SCHEMA API-02) |
 
+| ASM-06 | 가정 | TRD 생성 여부는 결과물 제출 응답(`needsTrd`) 또는 보고서 응답의 TRD 포함 여부로 판별 가능 | TRD 패널·단계 UI의 조건부 렌더링 기준 | 확인 필요 (SCHEMA 반영 대기) |
+
 ### 1.4 용어 정의
 
 | 용어 | 정의 | 데이터/코드상의 명칭 |
 | --- | --- | --- |
 | 세션 | 인터뷰 시작부터 결과 조회까지의 단일 사용자 작업 단위 | `InterviewSession`, `sessionId` |
+| 계획 문서 | 사용자가 선택 업로드하는 기존 기획 문서(docx/txt/md). 전처리 후 분석 기준으로 저장 | `PlanDocument`, `preprocessStatus` |
 | 질문 노드 | 마인드맵의 개별 질문. 부모 관계로 트리 구성 | `QuestionNode`, `questionId`, `parentId` |
 | 활성 질문 | 현재 답변 입력이 가능한 유일한 질문 | `QuestionStatus.ACTIVE` |
-| 생성 작업 | PRD 생성 → TRD 생성 → 분석의 비동기 job | `GenerationJob`, `jobId`, `stage` |
-| 각주 | PRD·TRD의 대응 구간에 부여되는 동일 식별 번호 | `Comparison.footnoteNumber` |
-| 비교 구간 | 각주로 연결되는 양쪽 문서의 위치 범위와 상태 | `Comparison`, `prdRange`, `trdRange` |
+| 최종 결과물 | 질의 종료 후 제출하는 링크(웹/GitHub) 또는 파일(zip/docx/문서/코드) | `Artifact`, `artifactId` |
+| 생성 작업 | PRD 생성 → (조건부) TRD 생성 → 분석의 비동기 job. 단계 구성은 가변 | `GenerationJob`, `jobId`, `stages` |
+| 비교 대상 | 각주가 연결되는 PRD의 상대 문서. TRD 생성 시 TRD, 미생성 시 최종 결과물 | `AnalysisResult.target` |
+| 각주 | PRD와 비교 대상의 대응 구간에 부여되는 동일 식별 번호 | `Comparison.footnoteNumber` |
+| 비교 구간 | 각주로 연결되는 양쪽의 위치 범위와 상태 | `Comparison`, `prdRange`, `targetRange` |
 | 교차 강조 | 각주/지표/리포트 선택 시 4개 영역 동기 강조 | `selectedComparisonId` (전역 UI 상태) |
 | 산정 불가 | 값이 없거나 계산 불가한 지표의 명시적 상태 | `MetricStatus.NOT_COMPUTABLE` |
 
@@ -92,11 +100,11 @@
 | FR-5 | 단일 활성 질문 제어 | §5.1, §7.3 | `features/interview` | TC-06 | 설계 |
 | FR-6 | 캔버스 드래그 | §7.3 | `features/mindmap` | TC-07 | 설계 |
 | FR-7 | 현재 질문 복귀 | §7.3 | `features/mindmap` | TC-08 | 설계 |
-| FR-8 | 질의 종료 전환 | §5.1 | `app/router`, `features/interview` | TC-09 | 설계 |
-| FR-9 | 작업 단계 상태 표시 | §7.4 | `features/generation` | TC-10 | 설계 |
+| FR-8 | 질의 종료 → 결과물 제출 전환 | §5.1, §7.4a | `app/router`, `features/artifact` | TC-09 | 설계 |
+| FR-9 | 작업 단계 상태 표시(가변 단계) | §7.4 | `features/generation` | TC-10 | 설계 |
 | FR-10 | 새로고침 후 상태 복구 | §5.4, §7.4 | `features/generation`, `shared/persistence` | TC-11 | 설계 |
 | FR-11 | 30:70 결과 레이아웃 | §7.5 | `features/result` | TC-12 | 설계 |
-| FR-12 | 문서 독립 스크롤 렌더링 | §7.5, §7.6 | `features/result/document` | TC-13 | 설계 |
+| FR-12 | 문서 렌더링 (PRD 필수, TRD 조건부) | §7.5, §7.6 | `features/result/document` | TC-13 | 설계 |
 | FR-13 | 대응 각주 표시 | §7.6, §6.4 | `features/result/document` | TC-14 | 설계 |
 | FR-14 | 교차 강조 동기화 | §7.8 | `features/result/selection` | TC-15 | 설계 |
 | FR-15 | 분석 지표 시각화 | §7.7 | `features/result/metrics` | TC-16 | 설계 |
@@ -105,6 +113,8 @@
 | FR-18 | 문서 다운로드 | §7.6 | `features/result/document` | TC-19 | 설계 |
 | FR-19 | 결과 빈 상태 | §12.2 | `features/result` | TC-20 | 설계 |
 | FR-20 | 이탈 방지 확인 | §7.1 | `app/AppShell` | TC-21 | 설계 |
+| FR-21 | 계획 문서 업로드·전처리 상태 | §7.2a | `features/plan-doc` | TC-25 | 설계 |
+| FR-22 | 최종 결과물 제출 | §7.4a | `features/artifact` | TC-26 | 설계 |
 | NFR-반응성 | 입력·드래그 100ms 이내 반영 | §10 | `features/mindmap` | TC-22 | 설계 |
 | NFR-접근성 | WCAG 2.1 AA, 키보드 전 흐름 | §9 | 전 모듈 | TC-23 | 설계 |
 | NFR-보안 | XSS 방지, 민감 데이터 미보관 | §11 | `shared/markdown`, `shared/persistence` | TC-24 | 설계 |
@@ -230,7 +240,8 @@ src/
 | --- | --- | --- | --- | --- |
 | `/` | 홈·첫 질문 (INITIAL) | 없음 | 없음 (진입 시 세션 생성) | 저장된 세션이 있으면 이어하기 안내 후 해당 단계로 이동 |
 | `/interview/:sessionId` | 연속 질의 마인드맵 (INTERVIEWING) | 세션 존재, 인터뷰 진행 중 | `sessionId` | 질문 트리 전체 재조회(API-07) 후 활성 질문 복원. 세션 무효 시 `/`로 안내 |
-| `/generating/:sessionId` | 생성·분석 대기 (GENERATING_*, ANALYZING) | 질의 종료됨, job 존재 | `sessionId`, `jobId` | job 상태 조회(API-11)로 단계 복원. 완료 시 `/result`로 자동 이동 |
+| `/submit/:sessionId` | 최종 결과물 제출 (SUBMITTING_ARTIFACT) | 질의 종료됨, job 미생성 | `sessionId` | 세션 상태 조회로 복원. 이미 제출됐으면 `/generating`으로 이동 |
+| `/generating/:sessionId` | 생성·분석 대기 (GENERATING_*, ANALYZING) | 결과물 제출됨, job 존재 | `sessionId`, `jobId` | job 상태 조회(API-11)로 단계 복원. 완료 시 `/result`로 자동 이동 |
 | `/result/:sessionId` | 분석 결과 (COMPLETED) | 분석 완료 | `sessionId` | 결과 재조회로 복원. 미완료 시 `/generating`으로 리다이렉트 |
 | `*` | 404 안내 | - | - | 홈 이동 액션 제공 |
 
@@ -244,16 +255,20 @@ src/
 stateDiagram-v2
     [*] --> INITIAL
     INITIAL --> INTERVIEWING: 첫 답변 제출 성공
-    INTERVIEWING --> GENERATING_PRD: 질의 종료 신호 수신
-    GENERATING_PRD --> GENERATING_TRD: PRD 단계 완료
+    INTERVIEWING --> SUBMITTING_ARTIFACT: 질의 종료 신호 수신
+    SUBMITTING_ARTIFACT --> GENERATING_PRD: 결과물 제출 수락 (needsTrd 판단 포함)
+    GENERATING_PRD --> GENERATING_TRD: PRD 단계 완료 (needsTrd = true)
+    GENERATING_PRD --> ANALYZING: PRD 단계 완료 (needsTrd = false)
     GENERATING_TRD --> ANALYZING: TRD 단계 완료
     ANALYZING --> COMPLETED: 분석 완료
     INITIAL --> FAILED: 첫 질문 조회 실패
     INTERVIEWING --> FAILED: 제출/질문 로드 실패(재시도 소진)
+    SUBMITTING_ARTIFACT --> FAILED: 결과물 제출 실패
     GENERATING_PRD --> FAILED: job 실패
     GENERATING_TRD --> FAILED: job 실패
     ANALYZING --> FAILED: job 실패
     FAILED --> INTERVIEWING: 재시도(실패 단계 = 인터뷰)
+    FAILED --> SUBMITTING_ARTIFACT: 재시도(실패 단계 = 결과물 제출)
     FAILED --> GENERATING_PRD: 재시도(실패 단계 = PRD)
     FAILED --> GENERATING_TRD: 재시도(실패 단계 = TRD)
     FAILED --> ANALYZING: 재시도(실패 단계 = 분석)
@@ -261,13 +276,16 @@ stateDiagram-v2
 
 - `FAILED` 상태는 `failedFrom`(원래 단계)과 `error`(ApiError)를 함께 보존한다.
 - 재시도는 항상 `failedFrom` 단계로 복귀하며, 완료된 단계(`completedStages`)는 재실행하지 않는다(FR-17, SCHEMA API-12).
+- `GENERATING_TRD` 단계는 결과물 제출 응답의 `needsTrd`가 true인 경우에만 존재한다. 프론트는 단계 목록을 하드코딩하지 않고 job 응답의 `stages`를 기준으로 렌더링한다.
 
 | 현재 상태 | 이벤트 | 전이 조건 | 다음 상태 | 부수 효과 | 실패 처리 |
 | --- | --- | --- | --- | --- | --- |
+| INITIAL | (선택) 계획 문서 업로드 | 파일 형식 docx/txt/md | INITIAL | 전처리 API 호출, 진행/완료 상태 표시 | 업로드 실패 안내 + 재시도, 인터뷰 진행은 차단하지 않음 |
 | INITIAL | 답변 제출 | 유효성 통과, 제출 중 아님 | INTERVIEWING | 세션 생성 + 답변 제출 API, sessionId 영속화 | 입력값 보존, 인라인 오류 + 재시도 |
 | INTERVIEWING | 답변 제출 | 활성 질문 존재, 제출 중 아님 | INTERVIEWING | 답변 제출, 다음 질문 노드 추가, 캔버스 자동 이동 | 노드 오류 상태, 입력값 보존 |
-| INTERVIEWING | 종료 신호 (`interviewStatus=COMPLETED`) | 마지막 응답에 포함 | GENERATING_PRD | `/generating` 이동, job 폴링 시작 | - |
-| GENERATING_PRD | 폴링 응답: PRD 단계 완료 | `completedStages`에 PRD 포함 | GENERATING_TRD | 단계 UI 갱신 | job 실패 시 FAILED(failedFrom 보존) |
+| INTERVIEWING | 종료 신호 (`interviewStatus=COMPLETED`) | 마지막 응답에 포함 | SUBMITTING_ARTIFACT | `/submit` 이동, 결과물 입력 UI 표시 | - |
+| SUBMITTING_ARTIFACT | 결과물 제출 | 링크 또는 파일 존재, 제출 중 아님 | GENERATING_PRD | 제출 API 호출, `needsTrd` 수신·영속화, job 폴링 시작 | 입력값 보존, 인라인 오류 + 재시도 |
+| GENERATING_PRD | 폴링 응답: PRD 단계 완료 | `completedStages`에 PRD 포함 | GENERATING_TRD 또는 ANALYZING (`needsTrd` 기준) | 단계 UI 갱신 | job 실패 시 FAILED(failedFrom 보존) |
 | GENERATING_TRD | 폴링 응답: TRD 단계 완료 | `completedStages`에 TRD 포함 | ANALYZING | 단계 UI 갱신 | 동일 |
 | ANALYZING | 폴링 응답: `SUCCEEDED` | 결과 조회 가능 | COMPLETED | `/result` 이동, 폴링 중단 | 동일 |
 | FAILED | 재시도 클릭 | retry API 202 수락 | failedFrom 단계 | 폴링 재개 | 재실패 시 FAILED 유지, 오류 갱신 |
@@ -333,6 +351,8 @@ stateDiagram-v2
 | API-05 | POST | `/sessions/{sessionId}/interview/start` | 인터뷰 시작, 첫 질문 | - | `QuestionNode` | 404/410 | 예 |
 | API-06 | POST | `/sessions/{sessionId}/interview/answers` | 답변 제출 → 다음 질문 0..n개 | `Answer` | `{ nextQuestions, interviewStatus }` | 400/409/410/502 | 예 (동일 questionId) |
 | API-07 | GET | `/sessions/{sessionId}/interview/tree` | 질문 트리 전체(복구/마인드맵) | - | `QuestionNode[]` + `Answer[]` | 404/410 | 예 |
+| API-08 | POST | `/sessions/{sessionId}/plan-doc` | (선택) 계획 문서 업로드·전처리 | multipart(docx/txt/md) | `PlanDocument` | 400/413/415 | 아니오 |
+| API-09 | POST | `/sessions/{sessionId}/artifacts` | 최종 결과물 제출(링크/파일) → TRD 필요 판단 | `{ link? }` 또는 multipart | `{ artifactId, needsTrd }` | 400/409/410 | 예 (동일 내용 재제출) |
 | API-10 | POST | `/sessions/{sessionId}/analysis` | 생성·분석 job 생성 | - | `GenerationJob` (202) | 409 | 예 (실행 중 job 반환) |
 | API-11 | GET | `/sessions/{sessionId}/jobs/{jobId}` | job 상태 폴링 | - | `GenerationJob` | 404 | 예 |
 | API-12 | POST | `/sessions/{sessionId}/jobs/{jobId}/retry` | 실패 단계부터 재시도 | - | `GenerationJob` (202) | 409 | 예 |
@@ -375,12 +395,31 @@ interface Answer {
 }
 ```
 
+#### 계획 문서(선택 업로드) 및 최종 결과물
+
+```ts
+interface PlanDocument {
+  documentId: string;
+  fileName: string;
+  preprocessStatus: "PROCESSING" | "DONE" | "FAILED";
+  extractedSummary?: string;         // 전처리 완료 시 추출 요약 (예: "초기 기획 항목 12건 추출")
+}
+
+interface Artifact {
+  artifactId: string;
+  type: "LINK" | "FILE";
+  value: string;                     // URL 또는 파일명
+  needsTrd: boolean;                 // 백엔드 판단: TRD(기술 개요) 생성 필요 여부
+}
+```
+
 #### 생성 작업
 
 ```ts
 interface GenerationJob {
   jobId: string;
   status: JobStatus;                 // QUEUED | RUNNING | SUCCEEDED | FAILED
+  stages: GenerationStage[];         // 이 job의 단계 구성 (TRD_GENERATION은 needsTrd=true일 때만 포함)
   stage: GenerationStage;            // PRD_GENERATION | TRD_GENERATION | ANALYSIS
   completedStages: GenerationStage[];
   progress?: number | null;          // 0~100. null이면 단계형 로더 사용 (FR-9)
@@ -393,7 +432,7 @@ interface GenerationJob {
 ```ts
 interface GeneratedDocument {
   documentId: string;
-  type: "PRD" | "TRD";
+  type: "PRD" | "TRD";               // PRD는 항상 존재. TRD는 needsTrd=true인 경우에만 응답에 포함
   title: string;
   markdown: string;                  // 블록 ID 주석 포함 (§6.4)
   downloadUrl?: string;              // 미제공 시 프론트에서 Blob 생성 (§7.6)
@@ -411,12 +450,12 @@ interface DocumentRange {
 
 interface Comparison {
   comparisonId: string;
-  footnoteNumber: number;            // PRD·TRD 공통 각주 번호
+  footnoteNumber: number;            // PRD·비교 대상 공통 각주 번호
   title: string;
   status: "MATCH" | "PARTIAL" | "DISTORTED" | "MISSING" | "ADDED";
   severity: "LOW" | "MEDIUM" | "HIGH";
-  prdRange: DocumentRange | null;    // null = TRD에만 존재 (ADDED)
-  trdRange: DocumentRange | null;    // null = PRD에만 존재 (MISSING)
+  prdRange: DocumentRange | null;    // null = 비교 대상에만 존재 (ADDED)
+  targetRange: DocumentRange | null; // 비교 대상(TRD 또는 결과물) 측 범위. null = PRD에만 존재 (MISSING)
   detail: ComparisonDetail;
 }
 
@@ -425,7 +464,7 @@ interface ComparisonDetail {
   reason: string;                    // 차이 판단 근거
   impact: string;                    // 원래 의도에 미치는 영향
   prdQuote?: string;
-  trdQuote?: string;
+  targetQuote?: string;              // 비교 대상(TRD 또는 결과물) 인용
   recommendation: string;            // 개선 제안
   confidence?: "LOW" | "MEDIUM" | "HIGH";  // 미제공 시 미표시
 }
@@ -436,10 +475,10 @@ interface ComparisonDetail {
 ```ts
 interface AnalysisMetric {
   metricId: string;                  // intent_alignment | intent_distortion | requirement_coverage |
-                                     // item_match_rate | token_usage | token_efficiency
+                                     // item_match_rate (TRD 생성 시에만) | hallucination_index
   label: string;
   value: number | null;              // null = 산정 불가
-  unit: string;                      // %, 점, tokens 등
+  unit: string;                      // %, 점 등
   status: "GOOD" | "WARN" | "BAD" | "NOT_COMPUTABLE";  // 백엔드 임계값 기준 (프론트 하드코딩 금지)
   threshold?: { good: number; warn: number };           // 표시·툴팁용 메타데이터
   description: string;               // 산식/의미 설명 (툴팁·정보 패널)
@@ -448,9 +487,11 @@ interface AnalysisMetric {
 }
 
 interface AnalysisResult {
-  documents: GeneratedDocument[];    // PRD + TRD
+  documents: GeneratedDocument[];    // PRD 필수 + TRD(needsTrd=true 시에만 포함)
+  target: "TRD" | "ARTIFACT";        // 비교 대상 종류. TRD 미생성 시 결과물과 비교
   comparisons: Comparison[];
-  metrics: AnalysisMetric[];
+  metrics: AnalysisMetric[];         // 백엔드가 넘겨주는 목록 그대로 렌더링 (개수 가변)
+  summaryText: string;               // 리포트 기본 상태에 표시할 분석 요약
   aiGeneratedNotice: true;           // AI 생성 결과 고지 표기
 }
 ```
@@ -461,7 +502,7 @@ interface AnalysisResult {
 | --- | --- | --- |
 | 위치 식별 방식 | Block ID (Markdown 블록 단위 안정 ID) + 선택적 블록 내 오프셋 | 텍스트 매칭보다 재렌더링에 안전. PRD §12 리스크 대응 |
 | ID 안정성 보장 | 백엔드가 문서 생성 시 블록 ID를 확정·동봉하며 이후 불변 | 프론트 재계산 없이 매핑 유지 |
-| 한쪽 문서에만 존재하는 항목 | `prdRange`/`trdRange` 중 하나가 null → `한쪽 문서에만 존재` 배지로 표시 | PRD §6.4 누락 항목 요구 |
+| 한쪽 문서에만 존재하는 항목 | `prdRange`/`targetRange` 중 하나가 null → `한쪽 문서에만 존재` 배지로 표시 | PRD §6.4 누락 항목 요구 |
 | 범위가 겹치는 비교 항목 | 하나의 블록에 복수 각주 허용. 각주 마커를 나란히 표시하고 강조는 선택된 항목만 적용 | 중첩 강조 충돌 방지 |
 | Markdown 변환 후 매핑 | `shared/markdown` 렌더러가 블록 ID를 DOM `data-block-id`로 주입해 스크롤·강조 대상 특정 | §7.6 |
 | 매핑 실패 표시 | 대상 블록 미존재 시 강조 생략, 리포트에 `문서 내 위치를 찾을 수 없음` 표시 + 관측 이벤트 전송 | 조용한 실패 방지 |
@@ -530,6 +571,16 @@ interface ApiError {
 | 중복 제출 차단 | mutation pending 동안 버튼 disabled + 시퀀스 가드(§5.3) |
 | 제출 실패 시 값 보존 | RHF 상태 유지(리셋은 성공 시에만). 오류 메시지 + 동일 값 재시도 버튼 |
 
+### 7.2a 계획 문서 업로드 (선택)
+
+| 설계 항목 | 내용 |
+| --- | --- |
+| 배치 | 홈 화면 첫 질문 카드 상단에 점선 카드로 표시. `(선택)` 라벨 명시 |
+| 허용 형식 | docx/txt/md. `<input type="file" accept=".docx,.txt,.md">` + MIME 검증. 그 외 형식은 업로드 전 거부 안내 |
+| 업로드·전처리 상태 | `PROCESSING`(스피너 + "전처리 중 — 초기 기획 추출…") → `DONE`(체크 + `extractedSummary` 표시) → `FAILED`(오류 + 재시도) |
+| 인터뷰와의 관계 | 업로드는 인터뷰 진행을 차단하지 않음(비동기). 전처리 결과는 백엔드가 분석 기준으로 저장 |
+| 크기 제한 | 413 응답 시 제한 안내. 구체 상한은 SCHEMA에서 확정(OQ) |
+
 ### 7.3 질문 마인드맵/캔버스
 
 | 설계 항목 | 내용 |
@@ -557,7 +608,7 @@ interface ApiError {
 
 | 설계 항목 | 내용 |
 | --- | --- |
-| 단계 상태 모델 | 3단계(PRD 생성/TRD 생성/비교 분석) × 4상태(대기/진행 중/완료/실패). `GenerationJob.stage`+`completedStages`에서 파생 |
+| 단계 상태 모델 | 가변 단계(PRD 생성 / 조건부 TRD 생성 / 비교 분석) × 4상태(대기/진행 중/완료/실패). `GenerationJob.stages`+`stage`+`completedStages`에서 파생. 단계 목록 하드코딩 금지 |
 | 상태 수신 방식 | TanStack Query 폴링 2000ms. `SUCCEEDED`/`FAILED` 도달 시 폴링 중단 |
 | 폴링/재연결 정책 | 네트워크 오류 시 지수 백오프(최대 10s)로 폴링 유지, 오프라인 배너 표시. `online` 이벤트에 즉시 재조회 |
 | 실제 진행률 유무 처리 | `progress`가 숫자면 백분율 바, null이면 단계형 로더만 표시(FR-9, 임의 백분율 금지) |
@@ -566,16 +617,27 @@ interface ApiError {
 | 실패 단계 재시도 | 실패 단계명 + `ApiError.message` + 재시도 버튼. retry API 호출 후 폴링 재개(완료 단계 재실행 없음) |
 | 새로고침 복구 | `sessionStorage`의 jobId로 API-11 재조회 후 단계 복원(§5.4). 이미 완료면 `/result` 즉시 이동 |
 
+### 7.4a 최종 결과물 제출
+
+| 설계 항목 | 내용 |
+| --- | --- |
+| 진입 조건 | `interviewStatus=COMPLETED` 수신 시 `/submit` 라우트로 전환(FR-8) |
+| 입력 수단 | 링크 입력(`textarea`/`input`) + 파일 첨부(zip/docx/문서/코드) 병행. 최소 하나 있어야 제출 활성화(FR-22) |
+| 제출 처리 | API-09 호출. pending 동안 중복 제출 차단. 응답의 `needsTrd`를 전역 상태·`sessionStorage`에 영속화 |
+| TRD 판단 반영 | `needsTrd` 값으로 대기 화면 단계 구성(§7.4)과 결과 화면 TRD 패널 표시(§7.5)를 결정 |
+| 실패 처리 | 입력값 보존 + 인라인 오류 + 재시도. 400(형식 오류)/413(크기 초과) 구분 안내 |
+
 ### 7.5 분석 결과 레이아웃
 
 | 영역 | 크기/동작 | 데이터 | 로딩/빈 상태 | 오류 상태 |
 | --- | --- | --- | --- | --- |
-| PRD 패널 | 좌 30%의 상단 50%, 독립 스크롤 | `GeneratedDocument(type=PRD)` + PRD측 각주 | 문서 스켈레톤 / `문서 없음` 원인 안내 | 부분 실패 시 해당 패널만 오류 + 재조회 |
-| TRD 패널 | 좌 30%의 하단 50%, 독립 스크롤 | `GeneratedDocument(type=TRD)` + TRD측 각주 | 동일 | 동일 |
-| 분석 시각화 | 우 70%의 상부 70%, 독립 스크롤 | `AnalysisMetric[]` + `ChartSpec[]` | 지표 카드 스켈레톤 / 지표 없음 사유 안내(FR-19) | 오류 카드 + 재조회. 문서 패널은 유지 |
-| 상세 리포트 | 우 70%의 하부 30%, 독립 스크롤 | 선택된 `Comparison.detail` | 기본 상태: 각주 선택 안내 + 분석 요약 | 선택 항목 로드 실패 안내 |
+| PRD 패널 | 좌 30%. TRD 존재 시 상단 50%, 미존재 시 좌측 대부분. 독립 스크롤 | `GeneratedDocument(type=PRD)` + PRD측 각주 | 문서 스켈레톤 / `문서 없음` 원인 안내 | 부분 실패 시 해당 패널만 오류 + 재조회 |
+| TRD 패널 (조건부) | 좌 30%의 하단 50%, 독립 스크롤. **백엔드 응답에 TRD 포함 시에만 렌더링**, 미포함 시 `TRD 미생성 — 기술 개요가 필요하지 않음` 안내 배너 | `GeneratedDocument(type=TRD)` + 비교 대상측 각주 | 동일 | 동일 |
+| 분석 시각화 | 우 70%의 상부 40%. 지표 카드는 단일 행 그리드로 **스크롤 없이 전부 표시** | `AnalysisMetric[]`(개수 가변) + `ChartSpec[]` | 지표 카드 스켈레톤 / 지표 없음 사유 안내(FR-19) | 오류 카드 + 재조회. 문서 패널은 유지 |
+| 상세 리포트 | 우 70%의 하부 60%, 독립 스크롤. 백엔드 데이터 그대로 렌더링 | 선택된 `Comparison.detail` + `summaryText` | 기본 상태: 각주 선택 안내 + 분석 요약 | 선택 항목 로드 실패 안내 |
 
-- 좌/우, 상/하 경계에 1px 구분선 + 충분한 명도 대비. 비율은 CSS Grid 상수(`30fr 70fr`, `70fr 30fr`)로 관리.
+- 좌/우, 상/하 경계에 1px 구분선 + 충분한 명도 대비. 비율은 CSS Grid/Flex 상수(`30fr 70fr`, `40fr 60fr`)로 관리.
+- 지표 카드 그리드는 `grid-template-columns: repeat(N, minmax(0,1fr))`(N = 지표 수)로 카드 수에 맞춰 자동 분할한다.
 
 ### 7.6 Markdown 렌더링 및 교차 강조
 
@@ -599,9 +661,11 @@ interface ApiError {
 | 의도 정합성 점수 | 게이지/점수 카드 | 0~100 점 | 백엔드 `status`/`threshold` 메타데이터 | 점수 텍스트 + 상태 라벨 |
 | 의도 왜곡도 | 점수 카드 + 심각도 배지 | 0~100 점 | 동일 | 텍스트 + 아이콘 |
 | 요구사항 충족률/누락률 | 누적 막대 | % | 동일 | 수치 표 병행 |
-| PRD·TRD 항목 일치율 | 도넛(일치/부분/왜곡/누락/추가 분포) | %·건수 | 동일 | 상태별 건수 표 |
-| 입력·출력 토큰 사용량 | 막대 (입력 vs 출력) | tokens | 값 그대로 표시(상태 없음) | 수치 표 |
-| 토큰 효율성 | 점수 카드 | 백엔드 정의 단위 | 백엔드 메타데이터 | 텍스트 + 설명 툴팁 |
+| PRD·TRD 항목 일치율 (TRD 생성 시에만) | 도넛(일치/부분/왜곡/누락/추가 분포) | %·건수 | 동일 | 상태별 건수 표 |
+| 할루시네이션 지수 | 점수 카드 | 0~100 점 (낮을수록 양호) | 동일 | 텍스트 + 설명 툴팁 |
+
+- 지표 목록·개수는 백엔드 응답(`AnalysisResult.metrics`)을 그대로 렌더링하며 프론트에서 목록을 하드코딩하지 않는다.
+- 모든 지표 카드는 상부 40% 영역 안에서 스크롤 없이 단일 행으로 표시한다(CON-04).
 
 - 상태 색상: 양호=초록, 주의/나쁨=빨강, 중간=주황/중립. 항상 라벨·아이콘·패턴 병행(색상 단독 의미 금지).
 - 지표 산식·의미는 `description`을 정보 아이콘 툴팁/패널로 노출.
@@ -610,14 +674,15 @@ interface ApiError {
 
 ### 7.8 선택 연동 규칙
 
-| 사용자 액션 | PRD 패널 | TRD 패널 | 시각화 | 상세 리포트 | URL/복구 상태 |
+| 사용자 액션 | PRD 패널 | TRD 패널(존재 시) | 시각화 | 상세 리포트 | URL/복구 상태 |
 | --- | --- | --- | --- | --- | --- |
 | 각주 선택 | 대응 블록 강조 + 스크롤 | 대응 블록 강조 + 스크롤 | 관련 지표/세그먼트 강조 | 해당 `ComparisonDetail` 표시 | `?c={comparisonId}` 쿼리 반영 (새로고침 복원) |
 | 지표/항목 선택 | `relatedComparisonIds` 첫 항목 블록 강조 + 스크롤 | 동일 | 선택 지표 강조 | 첫 관련 항목 표시 + 관련 목록 | 동일 |
 | 선택 해제 (Esc/재클릭/바깥 클릭) | 강조 제거 | 강조 제거 | 강조 제거 | 기본 안내 상태 복귀 | 쿼리 제거 |
 
 - 무한 루프 방지: store 업데이트는 사용자 액션에서만 발생하고, 각 영역은 구독-반영만 수행한다(영역 간 직접 호출 금지).
-- `prdRange`/`trdRange`가 null인 항목은 해당 패널 강조를 생략하고 `한쪽 문서에만 존재` 배지를 리포트에 표시.
+- `prdRange`/`targetRange`가 null인 항목은 해당 패널 강조를 생략하고 `한쪽 문서에만 존재` 배지를 리포트에 표시.
+- TRD 미생성 세션에서는 TRD 패널 강조가 생략되고 리포트의 비교 대상 인용(`targetQuote`)이 결과물 인용으로 표시된다.
 
 ---
 
@@ -630,14 +695,16 @@ interface ApiError {
 | `AppShell` | 고정 셸, 홈 버튼, 라우트 아웃렛, 오류 경계 | 레이아웃 | `app/` | banner/main 랜드마크, skip link | 전역 phase 구독 |
 | `HomeButton` + `LeaveConfirmModal` | 홈 이동, 이탈 확인(FR-20) | 공통 | `app/` | `role="dialog"`, 포커스 트랩 | 로컬 |
 | `QuestionCard` | 질문·보조 설명·입력·제출 | Feature | `features/interview` | label 연결, 오류 `aria-describedby` | RHF 폼 |
+| `PlanDocUpload` | (선택) 계획 문서 업로드·전처리 상태(FR-21) | Feature | `features/plan-doc` | 파일 input label, 상태 live region | 업로드 mutation |
+| `ArtifactSubmitForm` | 최종 결과물 링크/파일 제출(FR-22) | Feature | `features/artifact` | label 연결, 오류 안내 | RHF + mutation |
 | `AnswerForm` | 검증·제출·단축키·pending 가드 | Feature | `features/interview` | `aria-busy`, 단축키 힌트 | RHF + mutation |
 | `MindmapCanvas` | React Flow 래퍼, 팬·뷰포트·경계 | Feature | `features/mindmap` | `role="application"` + 키보드 탐색(§9.2) | 뷰포트 store |
 | `QuestionFlowNode` | 상태별 노드 렌더링, 요약/펼침 | Feature | `features/mindmap` | 상태 텍스트 라벨 포함 | 로컬 |
 | `SkeletonNode` | 다음 질문 로딩 표시 | Feature | `features/mindmap` | `aria-hidden` + live region 별도 알림 | - |
 | `GoToActiveButton` | 현재 질문 복귀(FR-7) | Feature | `features/mindmap` | 버튼, 단축키 `Home` | - |
-| `GenerationProgress` | 3단계 상태 표시·재시도 | Feature | `features/generation` | `aria-live="polite"` 단계 알림 | Query 파생 |
-| `ResultLayout` | 30:70 / 70:30 그리드 | 레이아웃 | `features/result` | 영역별 `region` + 라벨 | - |
-| `DocumentPanel` | Markdown 렌더링·각주·다운로드 | Feature | `features/result/document` | 제목 계층 유지, 각주는 버튼 | selection 구독 |
+| `GenerationProgress` | 가변 단계 상태 표시·재시도 | Feature | `features/generation` | `aria-live="polite"` 단계 알림 | Query 파생 |
+| `ResultLayout` | 좌 30 / 우 70 (우측 상 40 / 하 60) 그리드 | 레이아웃 | `features/result` | 영역별 `region` + 라벨 | - |
+| `DocumentPanel` | Markdown 렌더링·각주·다운로드. TRD 미생성 시 안내 배너 | Feature | `features/result/document` | 제목 계층 유지, 각주는 버튼 | selection 구독 |
 | `FootnoteMarker` | 각주 번호·상태 아이콘 | 공통 | `features/result/document` | `aria-label="각주 n, 상태"` | selection 구독 |
 | `MetricsBoard` | 지표 카드·차트 그리드 | Feature | `features/result/metrics` | 차트 대체 표 제공 | selection 구독 |
 | `MetricCard` | 지표 값·상태·툴팁·산정 불가 | Feature | `features/result/metrics` | 상태 텍스트 병행 | - |
@@ -822,7 +889,7 @@ interface ApiError {
 | 컴포넌트 테스트 | QuestionCard, GenerationProgress, FootnoteMarker, MetricCard 상태 규격(§8.2) | Vitest + RTL | CI | 전건 통과 |
 | API 계약 테스트 | Zod 스키마 vs SCHEMA fixture(정상·오류·경계) | Vitest + fixture | CI | 스키마 위반 0건 |
 | 통합 테스트 | 답변 제출→노드 추가, 폴링→단계 전환, 선택 동기화 | Vitest + RTL + MSW | CI | 전건 통과 |
-| E2E 테스트 | 4단계 핵심 흐름 전체, 새로고침 복구, 키보드 흐름 | Playwright | CI (main 병합 전) | 전건 통과 |
+| E2E 테스트 | 5단계 핵심 흐름 전체(결과물 제출 포함), 새로고침 복구, 키보드 흐름 | Playwright | CI (main 병합 전) | 전건 통과 |
 | 접근성 테스트 | 전 라우트 axe 검사 + 키보드 시나리오 | axe-core + Playwright | CI | serious 이상 위반 0건 |
 | 성능 테스트 | 성능 예산(§10.1) | Lighthouse CI, fixture 계측 | CI (main) | 예산 내 |
 | 브라우저 테스트 | Chrome/Edge/Firefox 최근 2개 주요 버전 | Playwright 프로젝트 매트릭스 | CI (main) | 전건 통과 |
@@ -839,10 +906,10 @@ interface ApiError {
 | TC-06 | P0 | 항상 하나의 노드만 활성 | 다중 질문 수신 | 활성 1개, 미도착 질문 미표시 | FR-5 |
 | TC-07 | P0 | 캔버스만 드래그, 입력 필드 텍스트 선택과 충돌 없음 | 노드 다수 | 페이지 고정, 입력 정상 | FR-6, AC-4, AC-5 |
 | TC-08 | P0 | `현재 질문으로 이동` 및 `Home` 키 복귀 | 뷰포트 밖 활성 노드 | 활성 노드 중앙 표시 | FR-7 |
-| TC-09 | P0 | 종료 신호 수신 시 대기 화면 자동 전환 | `COMPLETED` 응답 | `/generating` 이동, job 생성 | FR-8, AC-6 |
-| TC-10 | P0 | 3단계 상태 표시, progress null 시 단계형 로더 | job 폴링 | 임의 백분율 미표시 | FR-9 |
+| TC-09 | P0 | 종료 신호 수신 시 결과물 제출 화면 전환, 제출 후 대기 화면 이동 | `COMPLETED` 응답 | `/submit` 이동 → 제출 → `/generating` 이동, job 생성 | FR-8, FR-22, AC-6 |
+| TC-10 | P0 | 가변 단계(needsTrd에 따라 2~3단계) 상태 표시, progress null 시 단계형 로더 | job 폴링 | 단계 구성 응답 기준 렌더, 임의 백분율 미표시 | FR-9 |
 | TC-11 | P0 | 새로고침 후 인터뷰/대기/결과 각 단계 복구 | sessionStorage 식별자 | 진행 단계 화면 복원 | FR-10, AC-7 |
-| TC-12 | P0 | 30:70, 좌측 50:50, 우측 70:30 레이아웃 및 독립 스크롤 | 결과 데이터 | 비율·스크롤 유지 | FR-11, AC-8, AC-9 |
+| TC-12 | P0 | 30:70, 좌측 50:50(TRD 존재 시), 우측 40:60 레이아웃 및 독립 스크롤 | 결과 데이터 | 비율·스크롤 유지, 지표 행 무스크롤 | FR-11, AC-8, AC-9, AC-16 |
 | TC-13 | P0 | 긴 PRD·TRD(500블록) 렌더링 성능·구조 보존 | 합성 문서 | 1s 내 렌더, 제목 계층 유지 | FR-12 |
 | TC-14 | P0 | 동일 comparisonId가 양 문서에 동일 각주 번호로 표시 | 비교 fixture | 번호·상태 일치 | FR-13, AC-10 |
 | TC-15 | P0 | 각주/지표/리포트 선택 시 4개 영역 동기화, Esc 해제 | 결과 데이터 | 강조·스크롤·리포트 일치 | FR-14, AC-11 |
@@ -855,6 +922,8 @@ interface ApiError {
 | TC-22 | P0 | 노드 200개에서 드래그 55fps, 입력 100ms | 성능 fixture | 예산 내 | NFR-반응성 |
 | TC-23 | P0 | 키보드만으로 첫 답변→리포트 탐색 전 흐름 완료 | - | 전 단계 수행 가능 | US-9, AC-15 |
 | TC-24 | P0 | script/iframe/javascript: URL 포함 Markdown 무해화 | 악성 fixture | 실행·주입 없음 | NFR-보안 |
+| TC-25 | P1 | 계획 문서 업로드: 형식 검증, 전처리 진행/완료/실패 상태 표시, 인터뷰 비차단 | docx/txt/md fixture | 상태 전환 표시, 인터뷰 정상 진행 | FR-21 |
+| TC-26 | P0 | 결과물 제출: 링크/파일 최소 1개 검증, needsTrd 수신 후 단계·패널 반영 | 제출 fixture (needsTrd true/false) | TRD 단계·패널 조건부 표시 | FR-22, FR-12 |
 
 검토 시 최소 포함 범주 체크:
 
@@ -872,6 +941,8 @@ interface ApiError {
 - [x] 최소 지원 해상도와 지원 브라우저 (브라우저 매트릭스, 1280×720 뷰포트 E2E)
 - [x] 키보드 및 스크린 리더 핵심 흐름 (TC-23 + 수동)
 - [x] 네트워크 지연, 오프라인 및 연결 복구 (MSW 지연/차단 fixture)
+- [x] 계획 문서 업로드·전처리 상태 (TC-25)
+- [x] 결과물 제출과 TRD 조건부 생성 분기 (TC-26)
 
 ### 14.3 테스트 데이터
 
@@ -1082,19 +1153,21 @@ flowchart LR
 | AC-3 (질문 개수 무제한 렌더링) | §7.3, CON-03 | TC-05 | 미검증 |
 | AC-4 (캔버스만 드래그) | §7.1, §7.3 | TC-07 | 미검증 |
 | AC-5 (입력·드래그 무충돌) | §7.3 | TC-07 | 미검증 |
-| AC-6 (3단계 순서 표시) | §7.4 | TC-09, TC-10 | 미검증 |
+| AC-6 (제출 후 가변 단계 순서 표시) | §7.4, §7.4a | TC-09, TC-10 | 미검증 |
 | AC-7 (새로고침 복구) | §5.4 | TC-11 | 미검증 |
 | AC-8 (30:70 레이아웃) | §7.5 | TC-12 | 미검증 |
-| AC-9 (좌측 50:50 독립 스크롤) | §7.5 | TC-12 | 미검증 |
+| AC-9 (좌측 50:50 독립 스크롤, TRD 존재 시) | §7.5 | TC-12 | 미검증 |
 | AC-10 (동일 각주 번호) | §6.4, §7.6 | TC-14 | 미검증 |
 | AC-11 (각주 선택 동기화) | §7.8 | TC-15 | 미검증 |
 | AC-12 (색상 외 상태 구분) | §7.7, §8.3 | axe + 수동 | 미검증 |
 | AC-13 (실패 시 입력 보존) | §7.2, §12 | TC-04, TC-18 | 미검증 |
 | AC-14 (완료 단계 보존 재시도) | §5.1, §7.4 | TC-18 | 미검증 |
 | AC-15 (키보드 전 흐름) | §9 | TC-23 | 미검증 |
+| AC-16 (지표 카드 무스크롤 표시) | §7.5, §7.7 | TC-12 | 미검증 |
 
 ## 부록 B. 변경 이력
 
 | 버전 | 일자 | 작성자 | 변경 내용 | 검토자 |
 | --- | --- | --- | --- | --- |
 | v0.1 | 2026-08-22 | @sw1029 | 최초 작성 (PRD/front.md v0.1, SCHEMA v0.1 기준) | - |
+| v0.2 | 2026-08-22 | @sw1029 | 입력/출력 구조 개편 반영: 선택 계획 문서 업로드(FR-21), 최종 결과물 제출 단계(FR-22), TRD 조건부 생성(needsTrd)·조건부 패널 표시, 비교 대상 일반화(trdRange→targetRange), 토큰 지표 제거·할루시네이션 지수 추가, 우측 40:60 비율 및 지표 무스크롤 표시 | - |
