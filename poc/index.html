@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>mat-copilot — POC</title>
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1117; --bg2:#151823; --panel:#1b1f2e; --panel2:#20263a;
+    --line:#2c3450; --text:#e8ecf6; --sub:#9aa5c0; --accent:#6c8cff; --accent2:#8f6cff;
+    --good:#3ecf8e; --warn:#f5a623; --bad:#ff5d6c; --na:#7a86a8;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body,#root{height:100%; overflow:hidden;}
+  body{
+    background:radial-gradient(1200px 800px at 70% -10%, #1c2340 0%, var(--bg) 55%);
+    color:var(--text);
+    font-family:'Segoe UI','Pretendard','Apple SD Gothic Neo',sans-serif;
+  }
+  button{font-family:inherit;}
+
+  /* ---------- shell ---------- */
+  .shell{display:flex; flex-direction:column; height:100vh;}
+  .topbar{
+    height:56px; flex:0 0 56px; display:flex; align-items:center; gap:14px;
+    padding:0 18px; border-bottom:1px solid var(--line);
+    background:rgba(15,17,23,.75); backdrop-filter:blur(8px); z-index:50;
+  }
+  .home-btn{
+    display:flex; align-items:center; gap:9px; background:none; border:none; cursor:pointer;
+    color:var(--text); font-size:16px; font-weight:700; padding:6px 10px; border-radius:10px;
+    transition:background .2s;
+  }
+  .home-btn:hover{background:rgba(108,140,255,.12);}
+  .logo-dot{
+    width:26px;height:26px;border-radius:8px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;
+    box-shadow:0 0 16px rgba(108,140,255,.5);
+  }
+  .phase-steps{display:flex; gap:6px; margin-left:auto; align-items:center;}
+  .phase-step{
+    font-size:12px; color:var(--sub); padding:5px 12px; border-radius:99px;
+    border:1px solid transparent; transition:all .35s;
+  }
+  .phase-step.on{
+    color:#fff; border-color:var(--accent);
+    background:rgba(108,140,255,.15); box-shadow:0 0 12px rgba(108,140,255,.25);
+  }
+  .phase-step.done{color:var(--good);}
+  .phase-arrow{color:#3a4260; font-size:11px;}
+  .main{flex:1; position:relative; overflow:hidden;}
+
+  .screen{position:absolute; inset:0; animation:screenIn .5s ease both;}
+  @keyframes screenIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
+
+  /* ---------- home ---------- */
+  .home{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:26px; padding:20px;}
+  .hero-title{
+    font-size:34px; font-weight:800; letter-spacing:-.5px; text-align:center;
+    background:linear-gradient(90deg,#fff,#b9c6ff); -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:floatIn .8s ease both;
+  }
+  .hero-sub{color:var(--sub); font-size:15px; text-align:center; animation:floatIn .8s .12s ease both;}
+  @keyframes floatIn{from{opacity:0; transform:translateY(18px);} to{opacity:1; transform:none;}}
+
+  /* ---------- question card ---------- */
+  .qcard{
+    width:460px; max-width:92vw; background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius); padding:20px; box-shadow:0 18px 50px rgba(0,0,0,.45);
+    animation:floatIn .7s .2s ease both;
+  }
+  .qcard .badge-row{display:flex; gap:8px; margin-bottom:10px; align-items:center;}
+  .badge-row{display:flex; gap:8px; margin-bottom:10px; align-items:center;}
+  .badge{font-size:11px; padding:3px 9px; border-radius:99px; font-weight:700;}
+  .badge.req{background:rgba(108,140,255,.18); color:var(--accent);}
+  .badge.opt{background:rgba(143,108,255,.18); color:#b49bff;}
+  .badge.step{background:rgba(255,255,255,.06); color:var(--sub); font-weight:500;}
+  .qcard h3{font-size:17px; line-height:1.5; margin-bottom:6px;}
+  .helper{font-size:12.5px; color:var(--sub); margin-bottom:14px; line-height:1.55;}
+  textarea.answer{
+    width:100%; min-height:86px; resize:vertical; border-radius:10px;
+    border:1px solid var(--line); background:var(--bg2); color:var(--text);
+    padding:11px 12px; font-size:14px; font-family:inherit; line-height:1.55;
+    transition:border .2s, box-shadow .2s;
+  }
+  textarea.answer:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(108,140,255,.18);}
+  .qcard-foot{display:flex; justify-content:space-between; align-items:center; margin-top:11px;}
+  .hint{font-size:11.5px; color:var(--sub);}
+  .hint.err{color:var(--warn);}
+  .submit-btn{
+    border:none; cursor:pointer; border-radius:10px; padding:9px 20px; font-size:14px; font-weight:700;
+    color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent2));
+    transition:transform .15s, opacity .2s, box-shadow .2s;
+    box-shadow:0 6px 18px rgba(108,140,255,.35);
+  }
+  .submit-btn:hover:not(:disabled){transform:translateY(-1px); box-shadow:0 9px 24px rgba(108,140,255,.5);}
+  .submit-btn:disabled{opacity:.4; cursor:not-allowed; box-shadow:none;}
+
+  /* ---------- interview canvas ---------- */
+  .canvas-wrap{position:absolute; inset:0; overflow:hidden; cursor:grab; touch-action:none;}
+  .canvas-wrap.dragging{cursor:grabbing;}
+  .canvas-wrap::before{
+    content:''; position:absolute; inset:0;
+    background-image:radial-gradient(circle, #2a3050 1px, transparent 1px);
+    background-size:26px 26px; opacity:.5;
+  }
+  .canvas-inner{position:absolute; top:0; left:0; will-change:transform;}
+  .edges{position:absolute; top:0; left:0; overflow:visible; pointer-events:none;}
+  .edge{
+    fill:none; stroke:url(#edgeGrad); stroke-width:2.2; stroke-linecap:round;
+    stroke-dasharray:1; stroke-dashoffset:1;
+    animation:drawEdge .7s .1s ease forwards;
+  }
+  @keyframes drawEdge{to{stroke-dashoffset:0;}}
+  .edge-dot{fill:var(--accent2); animation:popIn .4s .6s ease both; transform:scale(0); transform-box:fill-box; transform-origin:center;}
+  @keyframes popIn{from{transform:scale(0); opacity:0;} to{transform:scale(1); opacity:1;}}
+
+  .node{
+    position:absolute; width:280px; background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius); padding:14px;
+    animation:nodeIn .55s cubic-bezier(.2,.9,.3,1.2) both;
+    transition:left .5s ease, top .5s ease, border-color .3s, box-shadow .3s;
+    cursor:default;
+  }
+  @keyframes nodeIn{from{opacity:0; transform:translateX(-18px) scale(.92);} to{opacity:1; transform:none;}}
+  .node .q{font-size:13.5px; font-weight:600; line-height:1.5; margin:7px 0 4px;}
+  .node .a-sum{
+    font-size:12px; color:var(--sub); line-height:1.5; margin-top:6px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; cursor:pointer;
+  }
+  .node .a-sum.expanded{display:block;}
+  .node.done{opacity:.92;}
+  .node.done .stat{color:var(--good);}
+  .node.active{
+    border-color:var(--accent);
+    animation:nodeIn .55s cubic-bezier(.2,.9,.3,1.2) both, glow 2.4s 1s ease-in-out infinite;
+    width:340px; z-index:5;
+  }
+  @keyframes glow{
+    0%,100%{box-shadow:0 0 0 3px rgba(108,140,255,.14), 0 14px 44px rgba(0,0,0,.5);}
+    50%{box-shadow:0 0 0 5px rgba(108,140,255,.3), 0 14px 44px rgba(0,0,0,.5);}
+  }
+  .node .stat{font-size:11px; font-weight:700; letter-spacing:.4px;}
+  .node.active .stat{color:var(--accent);}
+  .node.skeleton{
+    border-style:dashed; display:flex; flex-direction:column; gap:9px; min-height:96px; justify-content:center;
+  }
+  .sk-line{height:11px; border-radius:6px; background:linear-gradient(90deg,#232a42 25%,#2e3757 50%,#232a42 75%); background-size:200% 100%; animation:shimmer 1.3s infinite linear;}
+  @keyframes shimmer{from{background-position:200% 0;} to{background-position:-200% 0;}}
+  .node textarea.answer{min-height:72px; margin-top:8px; font-size:13px;}
+
+  .canvas-fab{
+    position:absolute; right:20px; bottom:20px; z-index:20; display:flex; gap:10px;
+  }
+  .fab{
+    border:1px solid var(--line); background:var(--panel); color:var(--text); cursor:pointer;
+    padding:10px 16px; border-radius:99px; font-size:13px; font-weight:600;
+    box-shadow:0 8px 24px rgba(0,0,0,.4); transition:all .2s;
+  }
+  .fab:hover{border-color:var(--accent); transform:translateY(-2px);}
+  .canvas-tip{
+    position:absolute; left:20px; bottom:20px; z-index:20; font-size:12px; color:var(--sub);
+    background:rgba(21,24,35,.8); border:1px solid var(--line); padding:8px 14px; border-radius:99px;
+    animation:floatIn .6s .5s both;
+  }
+
+  /* ---------- waiting ---------- */
+  .waiting{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:34px;}
+  .stages{display:flex; flex-direction:column; gap:0; width:430px; max-width:90vw;}
+  .stage{display:flex; gap:16px; align-items:stretch;}
+  .stage-rail{display:flex; flex-direction:column; align-items:center;}
+  .stage-icon{
+    width:40px; height:40px; border-radius:50%; flex:0 0 40px;
+    display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800;
+    border:2px solid var(--line); color:var(--sub); background:var(--panel);
+    transition:all .4s;
+  }
+  .stage.running .stage-icon{border-color:var(--accent); color:var(--accent);}
+  .stage.done .stage-icon{border-color:var(--good); color:#0c1a14; background:var(--good); animation:popScale .45s cubic-bezier(.2,1.4,.4,1) both;}
+  .stage.failed .stage-icon{border-color:var(--bad); color:var(--bad);}
+  @keyframes popScale{from{transform:scale(.4);} to{transform:scale(1);}}
+  .stage-line{width:2px; flex:1; min-height:34px; background:var(--line); transition:background .5s;}
+  .stage.done .stage-line{background:var(--good);}
+  .stage-body{padding:8px 0 26px;}
+  .stage-title{font-size:15.5px; font-weight:700;}
+  .stage-sub{font-size:12.5px; color:var(--sub); margin-top:4px; min-height:18px; transition:opacity .3s;}
+  .stage.running .stage-title{color:var(--accent);}
+  .spinner{
+    width:18px; height:18px; border-radius:50%;
+    border:2.5px solid rgba(108,140,255,.25); border-top-color:var(--accent);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .stage-bar{height:5px; border-radius:99px; background:var(--line); margin-top:9px; overflow:hidden; width:290px;}
+  .stage-bar > div{height:100%; border-radius:99px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .3s linear;}
+  .retry-btn{
+    margin-top:8px; border:1px solid var(--bad); color:var(--bad); background:none; border-radius:9px;
+    padding:6px 16px; font-size:12.5px; cursor:pointer; font-weight:700;
+  }
+  .retry-btn:hover{background:rgba(255,93,108,.1);}
+
+  /* ---------- result ---------- */
+  .result{display:flex; height:100%;}
+  .col-docs{width:30%; min-width:320px; border-right:1px solid var(--line); display:flex; flex-direction:column;}
+  .doc-panel{flex:1 1 50%; min-height:0; display:flex; flex-direction:column; overflow:hidden;}
+  .doc-panel + .doc-panel{border-top:1px solid var(--line);}
+  .doc-head{
+    flex:0 0 auto; display:flex; align-items:center; gap:9px; padding:10px 14px;
+    border-bottom:1px solid var(--line); background:var(--bg2);
+  }
+  .doc-head .t{font-size:13px; font-weight:800;}
+  .doc-head .ok{font-size:10.5px; color:var(--good); background:rgba(62,207,142,.12); padding:2px 8px; border-radius:99px;}
+  .dl-btn{
+    margin-left:auto; font-size:11.5px; border:1px solid var(--line); background:none; color:var(--sub);
+    border-radius:8px; padding:4px 10px; cursor:pointer; transition:all .2s;
+  }
+  .dl-btn:hover{color:var(--text); border-color:var(--accent);}
+  .doc-body{flex:1; overflow-y:auto; padding:14px 16px 30px; font-size:13px; line-height:1.7; scroll-behavior:smooth;}
+  .doc-body h1{font-size:17px; margin:8px 0 10px;}
+  .doc-body h2{font-size:14.5px; margin:16px 0 7px; color:#c9d4f5;}
+  .doc-body h3{font-size:13.5px; margin:12px 0 5px; color:#b6c2e8;}
+  .doc-body p{margin:6px 0;}
+  .doc-body ul{margin:6px 0 6px 18px;}
+  .doc-body li{margin:3px 0;}
+  .doc-body code{background:#262d47; border-radius:5px; padding:1px 6px; font-size:12px;}
+
+  .fn-span{border-bottom:2px dotted transparent; border-radius:4px; padding:0 2px; transition:all .3s; cursor:pointer;}
+  .fn-span.st-match{border-color:var(--good);}
+  .fn-span.st-partial{border-color:var(--warn);}
+  .fn-span.st-distortion{border-color:var(--bad); border-bottom-style:solid;}
+  .fn-span.st-missing{border-color:var(--bad); border-bottom-style:dashed;}
+  .fn-span.st-added{border-color:var(--accent2); border-bottom-style:solid;}
+  .fn-span.sel{background:rgba(108,140,255,.2); box-shadow:0 0 0 2px rgba(108,140,255,.3); animation:flash .8s ease;}
+  @keyframes flash{0%{background:rgba(108,140,255,.5);} 100%{background:rgba(108,140,255,.2);}}
+  sup.fn{
+    display:inline-flex; align-items:center; justify-content:center; min-width:17px; height:17px;
+    margin-left:3px; border-radius:6px; font-size:10.5px; font-weight:800; cursor:pointer;
+    vertical-align:super; transition:all .2s; user-select:none;
+  }
+  sup.fn.st-match{background:rgba(62,207,142,.16); color:var(--good);}
+  sup.fn.st-partial{background:rgba(245,166,35,.16); color:var(--warn);}
+  sup.fn.st-distortion,sup.fn.st-missing{background:rgba(255,93,108,.16); color:var(--bad);}
+  sup.fn.st-added{background:rgba(143,108,255,.18); color:#b49bff;}
+  sup.fn:hover{transform:scale(1.2);}
+  sup.fn.sel{outline:2px solid var(--accent); outline-offset:1px;}
+
+  .col-right{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .metrics-area{flex:1 1 70%; min-height:0; overflow-y:auto; padding:20px 24px;}
+  .metrics-title{font-size:15px; font-weight:800; margin-bottom:3px;}
+  .metrics-sub{font-size:12px; color:var(--sub); margin-bottom:16px;}
+  .metric-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:13px;}
+  .metric-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:15px 16px; cursor:pointer; transition:transform .25s, border-color .25s, box-shadow .25s; position:relative;
+    animation:floatIn .5s both;
+  }
+  .metric-card:hover{transform:translateY(-3px); border-color:#3d4a75;}
+  .metric-card.sel{border-color:var(--accent); box-shadow:0 0 0 3px rgba(108,140,255,.15);}
+  .metric-label{font-size:12px; color:var(--sub); display:flex; align-items:center; gap:6px;}
+  .info-dot{
+    width:14px;height:14px;border-radius:50%;border:1px solid var(--sub);color:var(--sub);
+    font-size:9px;display:inline-flex;align-items:center;justify-content:center; cursor:help; flex:0 0 14px;
+  }
+  .metric-value{font-size:27px; font-weight:800; margin:7px 0 2px; letter-spacing:-.5px; font-variant-numeric:tabular-nums;}
+  .metric-value .unit{font-size:13px; color:var(--sub); font-weight:600; margin-left:3px;}
+  .metric-status{font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:99px;}
+  .metric-status.good{background:rgba(62,207,142,.13); color:var(--good);}
+  .metric-status.warn{background:rgba(245,166,35,.13); color:var(--warn);}
+  .metric-status.bad{background:rgba(255,93,108,.13); color:var(--bad);}
+  .metric-status.na{background:rgba(122,134,168,.15); color:var(--na);}
+  .metric-bar{height:6px; border-radius:99px; background:#262d47; margin-top:11px; overflow:hidden;}
+  .metric-bar > div{height:100%; border-radius:99px; transition:width 1.1s cubic-bezier(.2,.8,.3,1);}
+  .metric-bar .good{background:linear-gradient(90deg,#2aa671,var(--good));}
+  .metric-bar .warn{background:linear-gradient(90deg,#c47f11,var(--warn));}
+  .metric-bar .bad{background:linear-gradient(90deg,#c2333f,var(--bad));}
+  .metric-tip{
+    position:absolute; left:10px; right:10px; bottom:calc(100% - 6px); z-index:30;
+    background:#0c0e15; border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-size:11.5px; color:var(--sub); line-height:1.5; pointer-events:none;
+    opacity:0; transform:translateY(4px); transition:all .2s; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .metric-card:hover .metric-tip{opacity:1; transform:none;}
+
+  .report-area{
+    flex:1 1 30%; min-height:0; border-top:1px solid var(--line); background:var(--bg2);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .report-head{flex:0 0 auto; padding:10px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px;}
+  .report-head .t{font-size:13px; font-weight:800;}
+  .report-body{flex:1; overflow-y:auto; padding:14px 18px 26px;}
+  .report-empty{color:var(--sub); font-size:13px; line-height:1.8; padding-top:6px;}
+  .rp-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px 22px; animation:floatIn .35s both;}
+  .rp-full{grid-column:1/-1;}
+  .rp-item .k{font-size:11px; color:var(--sub); font-weight:700; letter-spacing:.4px; margin-bottom:3px;}
+  .rp-item .v{font-size:12.8px; line-height:1.65;}
+  .quote{
+    border-left:3px solid var(--accent); background:rgba(108,140,255,.07);
+    padding:7px 11px; border-radius:0 8px 8px 0; font-size:12.3px; color:#cdd7f2; margin-top:3px; line-height:1.6;
+  }
+  .quote.trd{border-color:var(--accent2); background:rgba(143,108,255,.07);}
+  .sev{font-size:11px; font-weight:800; padding:2px 9px; border-radius:99px;}
+  .sev.high{background:rgba(255,93,108,.15); color:var(--bad);}
+  .sev.medium{background:rgba(245,166,35,.15); color:var(--warn);}
+  .sev.low{background:rgba(62,207,142,.15); color:var(--good);}
+  .conf-bar{display:flex; align-items:center; gap:8px;}
+  .conf-bar .track{flex:1; height:5px; background:#262d47; border-radius:99px; overflow:hidden;}
+  .conf-bar .track div{height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:99px; transition:width .8s ease;}
+  .goto-btn{
+    border:1px solid var(--line); background:none; color:var(--accent); font-size:11.5px; cursor:pointer;
+    border-radius:8px; padding:4px 11px; margin-left:auto; font-weight:700;
+  }
+  .goto-btn:hover{border-color:var(--accent);}
+
+  /* ---------- modal ---------- */
+  .modal-back{
+    position:fixed; inset:0; background:rgba(5,7,12,.66); z-index:100;
+    display:flex; align-items:center; justify-content:center; animation:fadeIn .2s both; backdrop-filter:blur(3px);
+  }
+  @keyframes fadeIn{from{opacity:0;}}
+  .modal{
+    width:390px; max-width:88vw; background:var(--panel); border:1px solid var(--line);
+    border-radius:16px; padding:24px; animation:popScale .3s cubic-bezier(.2,1.3,.4,1) both;
+  }
+  .modal h4{font-size:16px; margin-bottom:9px;}
+  .modal p{font-size:13px; color:var(--sub); line-height:1.65; margin-bottom:18px;}
+  .modal-actions{display:flex; gap:10px; justify-content:flex-end;}
+  .btn-ghost{border:1px solid var(--line); background:none; color:var(--text); border-radius:9px; padding:8px 16px; font-size:13px; cursor:pointer;}
+  .btn-danger{border:none; background:var(--bad); color:#fff; border-radius:9px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const {useState, useEffect, useRef, useCallback, useMemo} = React;
+
+/* =====================================================================
+ * Mock Backend — PRD/back.md 계약 시뮬레이션
+ *  - 세션 발급(FR-11, 로그인 없음), 인터뷰 질의/응답 루프(FR-2~4),
+ *  - 비동기 생성 job(단계별 상태), 분석 보고서(FR-8~10: 근거 인용 + 개수 기반 정량)
+ * ===================================================================== */
+const QUESTIONS = {
+  q1:{id:'q1', parentId:null, kind:'필수', prompt:'만들고 싶은 서비스 아이디어를 한 문장으로 설명해 주세요.', helper:'예) "모호한 아이디어를 질문으로 구체화해 PRD와 TRD를 만들어 주는 AI 서비스"처럼 핵심 가치를 담아 주세요.'},
+  q2:{id:'q2', parentId:'q1', kind:'필수', prompt:'이 서비스의 핵심 사용자는 누구인가요?', helper:'가장 먼저 만족시키고 싶은 단일 사용자 군을 알려 주세요. 예) 초기 기획 단계의 PM'},
+  q3:{id:'q3', parentId:'q2', kind:'필수', prompt:'그 사용자가 겪는 가장 큰 문제는 무엇인가요?', helper:'현재 어떤 방식으로 해결하고 있고, 무엇이 불편한지 함께 적어 주시면 좋아요.'},
+  q4:{id:'q4', parentId:'q3', kind:'필수', prompt:'MVP에 반드시 포함해야 할 기능 3가지는 무엇인가요?', helper:'우선순위 순서로 적어 주세요. 나머지는 이후 단계로 미룰 수 있습니다.'},
+  q5:{id:'q5', parentId:'q3', kind:'추가', prompt:'반대로, 이번 범위에서 의도적으로 제외할 것은 무엇인가요?', helper:'앞선 답변에서 범위가 넓어 보여 확인차 여쭤봅니다. (검증 agent가 confused 지표를 근거로 생성한 분기 질문)'},
+  q6:{id:'q6', parentId:'q5', kind:'필수', prompt:'성공했다고 판단할 기준(지표)은 무엇인가요?', helper:'예) 첫 사용 세션의 70%가 보고서 화면까지 도달'},
+};
+const ORDER = ['q1','q2','q3','q4','q5','q6'];
+
+const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+const mockApi = {
+  async createSession(){
+    await delay(300);
+    return { sessionId:'sess-' + Math.random().toString(36).slice(2,10), firstQuestion:QUESTIONS.q1 };
+  },
+  async submitAnswer(questionId, value){
+    await delay(900 + Math.random()*700); // 다음 질문 생성(agent) 지연 시뮬레이션
+    const idx = ORDER.indexOf(questionId);
+    const nextId = ORDER[idx+1];
+    return nextId ? {done:false, next:QUESTIONS[nextId]} : {done:true, next:null};
+  },
+};
+
+/* ---- 분석 결과 mock (각주 토큰: [[번호:강조할 구간]]) ---- */
+const PRD_MD = `# PRD — 아이디어 구체화 서비스
+## 1. 개요
+[[1:대화형 질문으로 모호한 아이디어를 구체화하고 PRD·TRD 문서를 자동 생성]]하는 서비스.
+
+## 2. 사용자
+[[2:초기 기획 단계의 PM과 1인 개발자]]를 핵심 사용자로 한다.
+
+## 3. 핵심 기능
+- 한 번에 하나씩 질문하는 인터뷰 흐름
+- [[4:답변 제출 즉시 실시간으로 다음 질문을 생성]]
+- 질문 흐름의 마인드맵 시각화
+
+## 4. 품질 요구사항
+- [[3:키보드만으로 전체 흐름을 수행할 수 있는 접근성(WCAG 2.1 AA)]]을 보장한다.
+- 생성 문서는 Markdown으로 다운로드할 수 있다.
+
+## 5. 비목표
+- 문서 공동 편집, 버전 관리는 범위에서 제외한다.`;
+
+const TRD_MD = `# TRD — 아이디어 구체화 서비스
+## 1. 아키텍처
+[[1:인터뷰 루프와 문서 생성 파이프라인을 분리한 agent 기반 백엔드]]로 구성한다.
+
+## 2. 사용자 트래픽 가정
+[[2:초기 기획 단계의 PM]] 대상 동시 세션 50을 가정한다.
+
+## 3. 질문 생성 파이프라인
+- [[4:답변을 큐에 적재 후 배치 단위로 모아 다음 질문을 생성]]한다.
+- confused 지표 산출용 검증 agent를 별도 운용한다.
+
+## 4. 운영 기능
+- [[5:관리자 통계 대시보드 API]]를 제공한다.
+- 세션 데이터는 24시간 후 파기한다.`;
+
+const COMPARISONS = [
+  {id:'c1', fn:1, title:'핵심 가치 정의', status:'일치', statusKey:'match', severity:'low',
+   summary:'PRD의 핵심 가치(질문 기반 구체화 + 문서 자동 생성)가 TRD 아키텍처 구성에 그대로 반영되었습니다.',
+   reason:'PRD §1과 TRD §1이 동일한 두 축(인터뷰 루프, 문서 생성)을 명시하며 용어 수준에서도 대응합니다.',
+   impact:'초기 의도가 기술 설계의 최상위 구조로 보존됨. 위험 없음.',
+   prdQuote:'대화형 질문으로 모호한 아이디어를 구체화하고 PRD·TRD 문서를 자동 생성',
+   trdQuote:'인터뷰 루프와 문서 생성 파이프라인을 분리한 agent 기반 백엔드',
+   recommendation:'현행 유지. 이후 기능 추가 시에도 두 축의 분리를 유지하세요.', confidence:0.93},
+  {id:'c2', fn:2, title:'핵심 사용자 범위', status:'부분 일치', statusKey:'partial', severity:'medium',
+   summary:'PRD는 "PM과 1인 개발자" 두 사용자 군을 정의했으나 TRD는 PM만을 트래픽 가정 대상으로 삼았습니다.',
+   reason:'TRD §2에서 "1인 개발자" 언급이 사라졌고, 동시 세션 산정에도 반영되지 않았습니다.',
+   impact:'1인 개발자향 시나리오(예: 코드 결과물 분석)가 용량·기능 설계에서 누락될 수 있음.',
+   prdQuote:'초기 기획 단계의 PM과 1인 개발자',
+   trdQuote:'초기 기획 단계의 PM 대상 동시 세션 50을 가정',
+   recommendation:'TRD 트래픽 가정에 1인 개발자 세그먼트를 추가하거나, PRD에서 사용자 범위를 축소해 정합시키세요.', confidence:0.84},
+  {id:'c3', fn:3, title:'접근성 요구사항 누락', status:'누락', statusKey:'missing', severity:'high',
+   summary:'PRD가 명시한 접근성(WCAG 2.1 AA, 키보드 흐름) 요구가 TRD에 존재하지 않습니다.',
+   reason:'TRD 전체에서 접근성·키보드·WCAG 관련 절이 발견되지 않음 (한쪽 문서에만 존재).',
+   impact:'구현 단계에서 접근성이 설계 없이 후처리로 밀릴 위험이 높음. 품질 요구 위반 가능.',
+   prdQuote:'키보드만으로 전체 흐름을 수행할 수 있는 접근성(WCAG 2.1 AA)',
+   trdQuote:'(대응 구간 없음 — TRD에 부재)',
+   recommendation:'TRD에 접근성 기술 요구 절(포커스 관리, ARIA, 테스트 기준)을 추가하세요.', confidence:0.91},
+  {id:'c4', fn:4, title:'실시간 → 배치 처리 왜곡', status:'왜곡', statusKey:'distortion', severity:'high',
+   summary:'PRD의 "실시간 질문 생성" 의도가 TRD에서 "배치 단위 생성"으로 변형되었습니다.',
+   reason:'PRD §3은 즉시성을 명시했으나 TRD §3은 큐 적재 후 배치 처리를 채택 — 응답 대기 시간이 의도와 상충.',
+   impact:'대화형 UX의 핵심(즉각적 다음 질문)이 훼손되어 인터뷰 이탈률 상승 가능. 심각도 높음.',
+   prdQuote:'답변 제출 즉시 실시간으로 다음 질문을 생성',
+   trdQuote:'답변을 큐에 적재 후 배치 단위로 모아 다음 질문을 생성',
+   recommendation:'스트리밍(SSE) 기반 동기 생성으로 변경하거나, 배치 지연 상한(예: 1초)을 PRD와 합의하세요.', confidence:0.88},
+  {id:'c5', fn:5, title:'범위 외 기능 추가', status:'추가', statusKey:'added', severity:'medium',
+   summary:'PRD에 없는 "관리자 통계 대시보드 API"가 TRD에 추가되었습니다.',
+   reason:'PRD §5 비목표에 운영/관리 기능 언급이 없고, 근거가 되는 요구사항을 찾을 수 없음.',
+   impact:'MVP 범위 초과로 구현 비용 증가. 의도되지 않은 scope creep.',
+   prdQuote:'(대응 구간 없음 — PRD에 부재)',
+   trdQuote:'관리자 통계 대시보드 API',
+   recommendation:'해당 API를 M2 이후로 이관하거나 PRD에 요구사항으로 승격 후 재합의하세요.', confidence:0.79},
+];
+
+const METRICS = [
+  {id:'m1', label:'의도 정합성 점수', value:82, unit:'/100', max:100, status:'good',
+   desc:'인터뷰에서 추출한 의도 항목 중 TRD에 왜곡 없이 반영된 비율 기반 점수. (개수 기반 정량 + 정성 보정)', rel:['c1','c2']},
+  {id:'m2', label:'의도 왜곡도', value:14, unit:'/100', max:100, status:'warn',
+   desc:'대응 구간 중 의미가 변형된 지점의 비율. 낮을수록 좋습니다. 왜곡 1건(실시간→배치)이 주요 원인.', rel:['c4']},
+  {id:'m3', label:'요구사항 충족률', value:78, unit:'%', max:100, status:'warn',
+   desc:'PRD 요구 9건 중 TRD가 커버한 7건의 비율. 누락 2건: 접근성, 다운로드 상세.', rel:['c3']},
+  {id:'m4', label:'PRD·TRD 일치율', value:71, unit:'%', max:100, status:'warn',
+   desc:'전체 대응 구간 대비 "일치" 판정 구간의 비율. 부분 일치·왜곡·추가 항목이 감점 요인.', rel:['c1','c2','c4','c5']},
+  {id:'m5', label:'토큰 사용량 (입력/출력)', value:12480, value2:8732, unit:'tok', status:'na', naLabel:'정보',
+   desc:'문서 생성 및 분석에 사용된 LLM 입력/출력 토큰 총량. 비용 추정의 기초 데이터.', rel:[]},
+  {id:'m6', label:'토큰 효율성', value:0.86, unit:'', max:1, status:'good', decimals:2,
+   desc:'유효 산출 토큰 ÷ 총 사용 토큰. 재시도·중복 생성 없이 사용된 비율.', rel:[]},
+  {id:'m7', label:'할루시네이션 지수', value:null, unit:'', status:'na',
+   desc:'외부 결과물(코드/링크)이 제출되지 않아 산정할 수 없습니다. 0점이 아닌 "산정 불가"입니다.', rel:[]},
+];
+
+const STAGES = [
+  {key:'prd', title:'PRD 생성', subs:['답변 정규화 중 (schema/tag 적용)…','핵심 의도 추출 중…','PRD 섹션 작성 중…']},
+  {key:'trd', title:'TRD 생성', subs:['PRD 요구사항 매핑 중…','기술 스택 결정 중…','TRD 섹션 작성 중…']},
+  {key:'analyze', title:'PRD·TRD 비교 분석', subs:['대응 구간 정렬 중…','테마별 drift agent 실행 중…','정량 집계 및 보고서 생성 중…']},
+];
+
+/* ---- 새로고침 복구용 저장소 (FR-10) ---- */
+const STORE_KEY = 'mat-copilot-poc';
+const saveState = (s) => { try{ sessionStorage.setItem(STORE_KEY, JSON.stringify(s)); }catch(e){} };
+const loadState = () => { try{ return JSON.parse(sessionStorage.getItem(STORE_KEY)); }catch(e){ return null; } };
+const clearState = () => { try{ sessionStorage.removeItem(STORE_KEY); }catch(e){} };
+
+/* =====================================================================
+ * 공통 유틸
+ * ===================================================================== */
+function useCountUp(target, {duration=1000, decimals=0} = {}){
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if(target == null) return;
+    let raf, start;
+    const tick = (t) => {
+      if(!start) start = t;
+      const p = Math.min((t-start)/duration, 1);
+      const eased = 1 - Math.pow(1-p, 3);
+      setVal(target * eased);
+      if(p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  if(target == null) return null;
+  return val;
+}
+
+function downloadMd(name, text){
+  const blob = new Blob([text.replace(/\[\[\d+:/g,'').replace(/\]\]/g,'')], {type:'text/markdown;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---- 미니 Markdown 렌더러 (XSS-safe: 문자열을 React 노드로만 변환) ---- */
+function renderInline(text, fnStatus, selectedFn, onFn){
+  const parts = [];
+  let rest = text, key = 0;
+  const tokenRe = /\[\[(\d+):([^\]]*)\]\]/;
+  while(rest){
+    const m = rest.match(tokenRe);
+    if(!m){ parts.push(...renderBold(rest, key)); break; }
+    if(m.index > 0) parts.push(...renderBold(rest.slice(0, m.index), key));
+    key += 100;
+    const fn = parseInt(m[1],10);
+    const st = fnStatus[fn] || 'match';
+    const sel = selectedFn === fn;
+    parts.push(
+      <span key={'fn'+fn+'-'+(key++)} data-fn={fn}
+        className={'fn-span st-'+st+(sel?' sel':'')}
+        onClick={(e)=>{e.stopPropagation(); onFn(fn);}}>
+        {renderBold(m[2], key+50)}
+        <sup className={'fn st-'+st+(sel?' sel':'')} title={'각주 '+fn+' — 클릭하여 상세 보기'}>{fn}</sup>
+      </span>
+    );
+    rest = rest.slice(m.index + m[0].length);
+    key += 200;
+  }
+  return parts;
+}
+function renderBold(text, keyBase=0){
+  return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean).map((seg,i)=>{
+    if(seg.startsWith('**')) return <strong key={keyBase+i}>{seg.slice(2,-2)}</strong>;
+    if(seg.startsWith('`')) return <code key={keyBase+i}>{seg.slice(1,-1)}</code>;
+    return <React.Fragment key={keyBase+i}>{seg}</React.Fragment>;
+  });
+}
+function Markdown({md, fnStatus, selectedFn, onFn}){
+  const lines = md.split('\n');
+  const out = []; let ul = null, k = 0;
+  const flush = () => { if(ul){ out.push(<ul key={'ul'+(k++)}>{ul}</ul>); ul = null; } };
+  for(const line of lines){
+    if(line.startsWith('- ')){
+      if(!ul) ul = [];
+      ul.push(<li key={'li'+(k++)}>{renderInline(line.slice(2), fnStatus, selectedFn, onFn)}</li>);
+      continue;
+    }
+    flush();
+    if(line.startsWith('### ')) out.push(<h3 key={k++}>{renderInline(line.slice(4), fnStatus, selectedFn, onFn)}</h3>);
+    else if(line.startsWith('## ')) out.push(<h2 key={k++}>{renderInline(line.slice(3), fnStatus, selectedFn, onFn)}</h2>);
+    else if(line.startsWith('# ')) out.push(<h1 key={k++}>{renderInline(line.slice(2), fnStatus, selectedFn, onFn)}</h1>);
+    else if(line.trim()) out.push(<p key={k++}>{renderInline(line, fnStatus, selectedFn, onFn)}</p>);
+  }
+  flush();
+  return <React.Fragment>{out}</React.Fragment>;
+}
+
+/* =====================================================================
+ * 답변 입력 폼 (첫 질문 카드 / 활성 노드 공용)
+ * ===================================================================== */
+function AnswerForm({onSubmit, sending, compact}){
+  const [value, setValue] = useState('');
+  const ref = useRef(null);
+  useEffect(() => { if(ref.current) ref.current.focus(); }, []);
+  const valid = value.trim().length >= 2;
+  const submit = () => { if(valid && !sending){ onSubmit(value.trim()); } };
+  return (
+    <div className="no-drag">
+      <textarea ref={ref} className="answer" value={value} disabled={sending}
+        placeholder="답변을 입력하세요…"
+        onChange={e=>setValue(e.target.value)}
+        onKeyDown={e=>{
+          if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
+        }} />
+      <div className="qcard-foot">
+        <span className={'hint'+((value && !valid)?' err':'')}>
+          {sending ? '전송 중…' : (!valid && value) ? '2자 이상 입력해 주세요' : 'Enter 제출 · Shift+Enter 줄바꿈'}
+        </span>
+        <button className="submit-btn" disabled={!valid || sending} onClick={submit}>
+          {sending ? '전송 중…' : compact ? '답변' : '답변 제출'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+ * 화면 1 — 홈 / 첫 질문
+ * ===================================================================== */
+function HomeScreen({question, onSubmit, sending, loading}){
+  return (
+    <div className="screen home">
+      <div>
+        <div className="hero-title">아이디어를 문서로, 의도 그대로.</div>
+        <div className="hero-sub" style={{marginTop:10}}>
+          한 번에 하나의 질문으로 아이디어를 구체화하고, 생성된 PRD·TRD의 의도 왜곡을 분석해 드립니다.
+        </div>
+      </div>
+      {loading ? (
+        <div className="qcard">
+          <div className="sk-line" style={{width:'55%'}}></div>
+          <div className="sk-line" style={{width:'85%', marginTop:10}}></div>
+          <div className="sk-line" style={{width:'100%', height:70, marginTop:14}}></div>
+        </div>
+      ) : (
+        <div className="qcard">
+          <div className="badge-row">
+            <span className="badge req">필수 질문</span>
+            <span className="badge step">질문 1</span>
+          </div>
+          <h3>{question.prompt}</h3>
+          <div className="helper">{question.helper}</div>
+          <AnswerForm onSubmit={onSubmit} sending={sending} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =====================================================================
+ * 화면 2 — 인터뷰 마인드맵 (드래그 캔버스)
+ * ===================================================================== */
+const NODE_W = 280, NODE_W_ACTIVE = 340, GAP_X = 130, GAP_Y = 210, PAD_X = 70, PAD_Y = 90;
+
+function computeLayout(nodes){
+  const byParent = {};
+  nodes.forEach(n => {
+    const p = n.parentId == null ? '__root__' : n.parentId;
+    if(!byParent[p]) byParent[p] = [];
+    byParent[p].push(n);
+  });
+  const pos = {}; let nextRow = 0;
+  const dfs = (n, depth) => {
+    const kids = byParent[n.id] || [];
+    let row;
+    if(kids.length === 0){ row = nextRow++; }
+    else {
+      const rows = kids.map(k => dfs(k, depth+1));
+      row = (rows[0] + rows[rows.length-1]) / 2;
+    }
+    pos[n.id] = {depth, row};
+    return row;
+  };
+  (byParent['__root__'] || []).forEach(r => dfs(r, 0));
+  return pos;
+}
+
+function InterviewScreen({visible, answers, activeId, sending, onSubmit, expandedId, setExpandedId}){
+  const pos = useMemo(() => computeLayout(visible), [visible]);
+  const [offset, setOffset] = useState({x:0, y:0});
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef(null);
+  const wrapRef = useRef(null);
+
+  const xy = (id) => {
+    const p = pos[id] || {depth:0, row:0};
+    return {x: PAD_X + p.depth * (NODE_W + GAP_X), y: PAD_Y + p.row * GAP_Y};
+  };
+
+  const centerOn = useCallback((id) => {
+    const wrap = wrapRef.current; if(!wrap || !pos[id]) return;
+    const {x, y} = xy(id);
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    setOffset({x: w*0.55 - x - NODE_W_ACTIVE/2, y: h*0.42 - y});
+  }, [pos]);
+
+  // 새 활성 질문 등장 시 자동 위치 보정 (FR-7 자동 보정)
+  useEffect(() => { if(activeId) centerOn(activeId); }, [activeId, centerOn]);
+  useEffect(() => { if(sending && visible.length) centerOn(visible[visible.length-1].id); }, [sending]);
+
+  const onPointerDown = (e) => {
+    if(e.target.closest('textarea, button, input, a, .no-drag, .a-sum')) return;
+    dragRef.current = {sx:e.clientX, sy:e.clientY, ox:offset.x, oy:offset.y};
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e) => {
+    const d = dragRef.current; if(!d) return;
+    setOffset({x: d.ox + (e.clientX - d.sx), y: d.oy + (e.clientY - d.sy)});
+  };
+  const onPointerUp = () => { dragRef.current = null; setDragging(false); };
+
+  const skeletonPos = (sending && visible.length) ? (() => {
+    const last = xy(visible[visible.length-1].id);
+    return {x: last.x + NODE_W + GAP_X, y: last.y};
+  })() : null;
+
+  const anchor = (id, side) => {
+    const p = xy(id);
+    const w = id === activeId ? NODE_W_ACTIVE : NODE_W;
+    return side === 'out' ? {x: p.x + w, y: p.y + 52} : {x: p.x, y: p.y + 52};
+  };
+
+  return (
+    <div className="screen">
+      <div ref={wrapRef} className={'canvas-wrap' + (dragging ? ' dragging' : '')}
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+        <div className="canvas-inner" style={{transform:'translate('+offset.x+'px, '+offset.y+'px)', transition: dragging ? 'none' : 'transform .55s cubic-bezier(.2,.8,.25,1)'}}>
+          <svg className="edges" width="6000" height="4000">
+            <defs>
+              <linearGradient id="edgeGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stopColor="#6c8cff" /><stop offset="1" stopColor="#8f6cff" />
+              </linearGradient>
+            </defs>
+            {visible.filter(n => n.parentId && pos[n.parentId]).map(n => {
+              const a = anchor(n.parentId, 'out'), b = anchor(n.id, 'in');
+              const mx = (a.x + b.x) / 2;
+              return (
+                <g key={'e'+n.id}>
+                  <path className="edge" pathLength="1"
+                    d={'M '+a.x+' '+a.y+' C '+mx+' '+a.y+', '+mx+' '+b.y+', '+b.x+' '+b.y} />
+                  <circle className="edge-dot" cx={b.x} cy={b.y} r="4" />
+                </g>
+              );
+            })}
+            {skeletonPos && visible.length > 0 && (() => {
+              const a = anchor(visible[visible.length-1].id, 'out');
+              const b = {x: skeletonPos.x, y: skeletonPos.y + 52};
+              const mx = (a.x + b.x) / 2;
+              return <path key="esk" className="edge" pathLength="1" style={{opacity:.45}}
+                d={'M '+a.x+' '+a.y+' C '+mx+' '+a.y+', '+mx+' '+b.y+', '+b.x+' '+b.y} />;
+            })()}
+          </svg>
+
+          {visible.map(n => {
+            const p = xy(n.id);
+            const isActive = n.id === activeId;
+            const ans = answers[n.id];
+            return (
+              <div key={n.id}
+                className={'node ' + (isActive ? 'active' : 'done')}
+                style={{left:p.x, top:p.y}}>
+                <div className="badge-row">
+                  <span className={'badge ' + (n.kind==='필수' ? 'req' : 'opt')}>{n.kind}</span>
+                  <span className="badge step">질문 {ORDER.indexOf(n.id)+1}</span>
+                  <span className="stat" style={{marginLeft:'auto'}}>
+                    {isActive ? (sending ? '⟳ 전송 중' : '● 활성') : '✓ 완료'}
+                  </span>
+                </div>
+                <div className="q">{n.prompt}</div>
+                {isActive && !sending && <div className="helper">{n.helper}</div>}
+                {isActive
+                  ? <AnswerForm onSubmit={v=>onSubmit(n.id, v)} sending={sending} compact />
+                  : ans != null && (
+                    <div className={'a-sum no-drag' + (expandedId===n.id ? ' expanded' : '')}
+                      title="클릭하여 전체 답변 보기"
+                      onClick={()=>setExpandedId(expandedId===n.id ? null : n.id)}>
+                      💬 {ans}
+                    </div>
+                  )}
+              </div>
+            );
+          })}
+
+          {skeletonPos && (
+            <div className="node skeleton" style={{left:skeletonPos.x, top:skeletonPos.y}}>
+              <div className="sk-line" style={{width:'42%'}}></div>
+              <div className="sk-line" style={{width:'88%'}}></div>
+              <div className="sk-line" style={{width:'66%'}}></div>
+              <div className="hint" style={{textAlign:'center'}}>다음 질문 생성 중…</div>
+            </div>
+          )}
+        </div>
+
+        <div className="canvas-tip">🖐 빈 공간을 드래그하여 질문 흐름을 탐색할 수 있어요</div>
+        <div className="canvas-fab">
+          <button className="fab no-drag" onClick={()=>centerOn(activeId || visible[visible.length-1].id)}>
+            ◎ 현재 질문으로 이동
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+ * 화면 3 — 문서 생성 및 분석 대기
+ * ===================================================================== */
+function WaitingScreen({completed, running, failed, progress, subIdx, onRetry}){
+  return (
+    <div className="screen waiting">
+      <div style={{textAlign:'center'}}>
+        <div className="hero-title" style={{fontSize:24}}>문서를 생성하고 있어요</div>
+        <div className="hero-sub" style={{marginTop:8}}>
+          작업은 백그라운드에서 진행됩니다 · 새로고침해도 진행 상태가 복구됩니다
+        </div>
+      </div>
+      <div className="stages">
+        {STAGES.map((st, i) => {
+          const isDone = completed.includes(st.key);
+          const isRun = running === st.key && !failed;
+          const isFail = failed === st.key;
+          return (
+            <div key={st.key} className={'stage' + (isDone?' done':'') + (isRun?' running':'') + (isFail?' failed':'')}>
+              <div className="stage-rail">
+                <div className="stage-icon">
+                  {isDone ? '✓' : isFail ? '✕' : isRun ? <div className="spinner"></div> : i+1}
+                </div>
+                {i < STAGES.length-1 && <div className="stage-line"></div>}
+              </div>
+              <div className="stage-body">
+                <div className="stage-title">{st.title}</div>
+                <div className="stage-sub">
+                  {isDone ? '완료' : isFail ? '작업에 실패했어요. 완료된 단계는 유지됩니다.' : isRun ? st.subs[subIdx % st.subs.length] : '대기 중'}
+                </div>
+                {isRun && <div className="stage-bar"><div style={{width: progress + '%'}}></div></div>}
+                {isFail && <button className="retry-btn" onClick={onRetry}>이 단계부터 재시도</button>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+ * 화면 4 — 분석 결과 (좌 30 : 우 70, 우측 상 70 : 하 30)
+ * ===================================================================== */
+const FN_STATUS = {};
+COMPARISONS.forEach(c => { FN_STATUS[c.fn] = c.statusKey; });
+
+function DocPanel({title, md, filename, selectedFn, onFn}){
+  const bodyRef = useRef(null);
+  useEffect(() => {
+    if(selectedFn == null || !bodyRef.current) return;
+    const el = bodyRef.current.querySelector('[data-fn="'+selectedFn+'"]');
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }, [selectedFn]);
+  return (
+    <div className="doc-panel">
+      <div className="doc-head">
+        <span className="t">{title}</span>
+        <span className="ok">✓ 생성 완료</span>
+        <button className="dl-btn" onClick={()=>downloadMd(filename, md)}>⬇ .md 다운로드</button>
+      </div>
+      <div className="doc-body" ref={bodyRef}>
+        <Markdown md={md} fnStatus={FN_STATUS} selectedFn={selectedFn} onFn={onFn} />
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({m, i, selected, onSelect}){
+  const raw = useCountUp(m.value, {duration:1100 + i*120});
+  const raw2 = useCountUp(m.value2, {duration:1100 + i*120});
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { const t = setTimeout(()=>setMounted(true), 120 + i*90); return ()=>clearTimeout(t); }, []);
+  const pct = (m.max && m.value != null) ? Math.min(100, (m.value / m.max) * 100) : null;
+  const statusLabel = {good:'✓ 양호', warn:'! 주의', bad:'✕ 나쁨',
+    na: m.value==null ? '? 산정 불가' : 'ℹ ' + (m.naLabel||'정보')}[m.status];
+  const fmt = (v) => v == null ? '' : Number(v).toLocaleString(undefined,
+    {minimumFractionDigits:m.decimals||0, maximumFractionDigits:m.decimals||0});
+  return (
+    <div className={'metric-card' + (selected ? ' sel' : '')}
+      style={{animationDelay:(i*0.07)+'s'}}
+      onClick={()=>{ if(m.rel.length) onSelect(m); }}>
+      <div className="metric-tip">{m.desc}</div>
+      <div className="metric-label">{m.label} <span className="info-dot">i</span></div>
+      <div className="metric-value">
+        {m.value == null ? <span style={{color:'var(--na)', fontSize:19}}>산정 불가</span> : (
+          <React.Fragment>
+            {fmt(raw)}
+            {m.value2 != null && <span> / {Math.round(raw2).toLocaleString()}</span>}
+            <span className="unit">{m.unit}</span>
+          </React.Fragment>
+        )}
+      </div>
+      <span className={'metric-status ' + m.status}>{statusLabel}</span>
+      {pct != null && (
+        <div className="metric-bar">
+          <div className={m.status === 'na' ? 'good' : m.status} style={{width: mounted ? pct + '%' : '0%'}}></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReportPanel({comp, onGoto}){
+  if(!comp) return (
+    <div className="report-body report-empty">
+      좌측 문서의 <sup className="fn st-distortion" style={{cursor:'default'}}>4</sup> 각주 번호나 상단 지표 카드를 선택하면
+      해당 차이의 근거·영향·개선 제안이 여기에 표시됩니다.<br/>
+      요약: 총 5개 대응 구간 — 일치 1 · 부분 일치 1 · 왜곡 1 · 누락 1 · 추가 1. 가장 심각한 항목은 <b>실시간→배치 처리 왜곡</b>입니다.
+    </div>
+  );
+  const stCls = {match:'good', partial:'warn', distortion:'bad', missing:'bad', added:'warn'}[comp.statusKey];
+  const sevLabel = {high:'높음', medium:'중간', low:'낮음'}[comp.severity];
+  return (
+    <div className="report-body" key={comp.id}>
+      <div className="rp-grid">
+        <div className="rp-item rp-full" style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
+          <sup className={'fn st-'+comp.statusKey} style={{cursor:'default'}}>{comp.fn}</sup>
+          <b style={{fontSize:14}}>{comp.title}</b>
+          <span className={'metric-status ' + stCls}>{comp.status}</span>
+          <span className={'sev ' + comp.severity}>심각도 {sevLabel}</span>
+          <button className="goto-btn" onClick={()=>onGoto(comp.fn)}>문서 위치로 이동 →</button>
+        </div>
+        <div className="rp-item rp-full"><div className="k">차이 요약</div><div className="v">{comp.summary}</div></div>
+        <div className="rp-item"><div className="k">판단 근거</div><div className="v">{comp.reason}</div></div>
+        <div className="rp-item"><div className="k">의도에 미치는 영향</div><div className="v">{comp.impact}</div></div>
+        <div className="rp-item"><div className="k">PRD 인용</div><div className="quote">{comp.prdQuote}</div></div>
+        <div className="rp-item"><div className="k">TRD 인용</div><div className="quote trd">{comp.trdQuote}</div></div>
+        <div className="rp-item"><div className="k">개선 제안</div><div className="v">💡 {comp.recommendation}</div></div>
+        <div className="rp-item">
+          <div className="k">분석 신뢰도</div>
+          <div className="conf-bar">
+            <div className="track"><div style={{width:(comp.confidence*100)+'%'}}></div></div>
+            <b style={{fontSize:12.5}}>{Math.round(comp.confidence*100)}%</b>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResultScreen(){
+  const [selectedFn, setSelectedFn] = useState(null);
+  const comp = COMPARISONS.find(c => c.fn === selectedFn) || null;
+  const selectFn = (fn) => setSelectedFn(prev => prev === fn ? null : fn);
+  return (
+    <div className="screen result">
+      <div className="col-docs">
+        <DocPanel title="PRD" md={PRD_MD} filename="prd.md" selectedFn={selectedFn} onFn={selectFn} />
+        <DocPanel title="TRD" md={TRD_MD} filename="trd.md" selectedFn={selectedFn} onFn={selectFn} />
+      </div>
+      <div className="col-right">
+        <div className="metrics-area">
+          <div className="metrics-title">종합 분석 시각화</div>
+          <div className="metrics-sub">
+            지표 카드에 마우스를 올리면 산식 설명을 볼 수 있어요 · 카드를 클릭하면 관련 차이 항목으로 연결됩니다 ·
+            분석 결과는 AI 판정으로 참고용입니다
+          </div>
+          <div className="metric-grid">
+            {METRICS.map((m, i) => (
+              <MetricCard key={m.id} m={m} i={i}
+                selected={comp != null && m.rel.indexOf(comp.id) >= 0}
+                onSelect={(mm)=>{ const c = COMPARISONS.find(cc=>cc.id===mm.rel[0]); if(c) selectFn(c.fn); }} />
+            ))}
+          </div>
+        </div>
+        <div className="report-area">
+          <div className="report-head">
+            <span className="t">차이 상세 리포트</span>
+            {comp && <button className="dl-btn" onClick={()=>setSelectedFn(null)}>선택 해제</button>}
+          </div>
+          <ReportPanel comp={comp} onGoto={(fn)=>setSelectedFn(fn)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+ * App — 상태 머신: INITIAL → INTERVIEWING → WAITING(생성/분석) → COMPLETED
+ * ===================================================================== */
+const PHASES = [
+  {key:'INITIAL', label:'홈'},
+  {key:'INTERVIEWING', label:'인터뷰'},
+  {key:'WAITING', label:'문서 생성'},
+  {key:'COMPLETED', label:'분석 결과'},
+];
+
+function App(){
+  const saved = useMemo(loadState, []);
+  const [phase, setPhase] = useState((saved && saved.phase) || 'INITIAL');
+  const [firstQ, setFirstQ] = useState(null);
+  const [answers, setAnswers] = useState((saved && saved.answers) || {});
+  const [activeId, setActiveId] = useState((saved && saved.activeId) || null);
+  const [sending, setSending] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const [showLeave, setShowLeave] = useState(false);
+
+  // 대기 화면 상태 (완료 단계는 복구 — FR-10 / 수용기준 14)
+  const [completed, setCompleted] = useState((saved && saved.completed) || []);
+  const [running, setRunning] = useState(null);
+  const [failed, setFailed] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [subIdx, setSubIdx] = useState(0);
+
+  // 세션 시작 (로그인 없이 session token 발급 시뮬레이션)
+  useEffect(() => {
+    if(phase !== 'INITIAL') return;
+    let alive = true;
+    mockApi.createSession().then(res => { if(alive) setFirstQ(res.firstQuestion); });
+    return () => { alive = false; };
+  }, [phase]);
+
+  // 상태 영속화 (새로고침 복구)
+  useEffect(() => {
+    saveState({phase, answers, activeId, completed});
+  }, [phase, answers, activeId, completed]);
+
+  const visible = useMemo(() => {
+    const ids = ORDER.filter(id => answers[id] != null || id === activeId);
+    return ids.map(id => QUESTIONS[id]);
+  }, [answers, activeId]);
+
+  const submitAnswer = async (qid, value) => {
+    if(sending) return; // 중복 제출 방지
+    setSending(true);
+    try{
+      const res = await mockApi.submitAnswer(qid, value);
+      setAnswers(a => Object.assign({}, a, {[qid]: value}));
+      if(res.done){
+        setActiveId(null);
+        setPhase('WAITING');
+      } else {
+        setActiveId(res.next.id);
+        setPhase('INTERVIEWING');
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // 생성/분석 job 실행 (단계 순차 진행, 완료 단계는 재실행하지 않음)
+  useEffect(() => {
+    if(phase !== 'WAITING' || failed) return;
+    const next = STAGES.find(s => completed.indexOf(s.key) < 0);
+    if(!next){ const t = setTimeout(()=>setPhase('COMPLETED'), 500); return ()=>clearTimeout(t); }
+    setRunning(next.key); setProgress(0);
+    const dur = 2600;
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      const p = Math.min(100, ((Date.now()-t0)/dur)*100);
+      setProgress(p);
+      if(p >= 100){
+        clearInterval(iv);
+        setCompleted(c => c.concat([next.key]));
+      }
+    }, 60);
+    const sv = setInterval(() => setSubIdx(i => i+1), 900);
+    return () => { clearInterval(iv); clearInterval(sv); };
+  }, [phase, completed, failed]);
+
+  const goHome = () => {
+    clearState();
+    setAnswers({}); setActiveId(null); setCompleted([]); setFailed(null);
+    setFirstQ(null); setPhase('INITIAL'); setShowLeave(false);
+  };
+  const onHomeClick = () => {
+    if(phase === 'INTERVIEWING' || phase === 'WAITING') setShowLeave(true);
+    else goHome();
+  };
+
+  const phaseIdx = PHASES.findIndex(p => p.key === phase);
+
+  return (
+    <div className="shell">
+      <div className="topbar">
+        <button className="home-btn" onClick={onHomeClick} title="홈으로">
+          <span className="logo-dot">◈</span> mat-copilot
+        </button>
+        <div className="phase-steps">
+          {PHASES.map((p, i) => (
+            <React.Fragment key={p.key}>
+              {i > 0 && <span className="phase-arrow">▸</span>}
+              <span className={'phase-step' + (i === phaseIdx ? ' on' : i < phaseIdx ? ' done' : '')}>
+                {i < phaseIdx ? '✓ ' : ''}{p.label}
+              </span>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+      <div className="main">
+        {phase === 'INITIAL' && (
+          <HomeScreen question={firstQ} loading={!firstQ} sending={sending}
+            onSubmit={(v)=>submitAnswer('q1', v)} />
+        )}
+        {phase === 'INTERVIEWING' && (
+          <InterviewScreen visible={visible} answers={answers} activeId={activeId}
+            sending={sending} onSubmit={submitAnswer}
+            expandedId={expandedId} setExpandedId={setExpandedId} />
+        )}
+        {phase === 'WAITING' && (
+          <WaitingScreen completed={completed} running={running} failed={failed}
+            progress={progress} subIdx={subIdx} onRetry={()=>setFailed(null)} />
+        )}
+        {phase === 'COMPLETED' && <ResultScreen />}
+      </div>
+
+      {showLeave && (
+        <div className="modal-back" onClick={()=>setShowLeave(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <h4>홈으로 이동할까요?</h4>
+            <p>진행 중인 인터뷰/생성 작업이 초기화됩니다. 이 동작은 되돌릴 수 없어요.</p>
+            <div className="modal-actions">
+              <button className="btn-ghost" onClick={()=>setShowLeave(false)}>계속 진행</button>
+              <button className="btn-danger" onClick={goHome}>홈으로 이동</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
