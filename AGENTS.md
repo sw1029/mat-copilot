@@ -16,3 +16,4 @@
 # 구현자 배경
 - 현재의 구현은 해커톤 목적임
 - https://github.com/matdaaiga-kr/matdathon-2026/blob/main/judgement/judgement-criteria.md 의 요소를 채점요소로 함
+- mvp 수준의 로직 구현을 목표로 함
