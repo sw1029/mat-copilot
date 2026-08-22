@@ -118,6 +118,16 @@ class InMemorySessionStore:
     def count_active(self) -> int:
         return len(self._states)
 
+    def record_usage(
+        self, session_id: str | None, input_tokens: int, output_tokens: int, estimated: bool = False
+    ) -> None:
+        """LLM 어댑터 usage sink — 세션 누적 토큰 계측 (TRD §11.1, 토큰 검증 없음·내부 전용)."""
+        if not session_id:
+            return
+        state = self._states.get(session_id)
+        if state is not None:
+            state.token_usage.add(input_tokens, output_tokens, estimated)
+
     def all_states(self) -> list[SessionState]:
         """앱 시작 시 고아 job 복구 전용 (TRD §7.8) — 비즈니스 조회 금지 (NG5)."""
         return list(self._states.values())

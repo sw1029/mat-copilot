@@ -12,6 +12,7 @@ from app.models.domain import (
     AnalysisJob,
     Answer,
     Artifact,
+    ChartSpec,
     IntentItem,
     NormalizationSchema,
     NormalizedIntent,
@@ -115,6 +116,7 @@ class SessionState:
     normalized_intents: list[NormalizedIntent] = field(default_factory=list)
     evaluation_items: list[EvaluationItem] = field(default_factory=list)
     report: Report | None = None
+    report_charts: list[ChartSpec] = field(default_factory=list)  # API-14 (FR-9)
 
     # 관측성 (TRD §11.1)
     token_usage: TokenUsage = field(default_factory=TokenUsage)

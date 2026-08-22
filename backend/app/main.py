@@ -66,6 +66,8 @@ def create_app(settings: Settings | None = None, runtime=None) -> FastAPI:
     store = InMemorySessionStore(max_active_sessions=settings.max_active_sessions)
     blob = BlobArchiver(settings.blob_connection_string, settings.blob_container)
     runtime = runtime if runtime is not None else build_runtime(settings)
+    if hasattr(runtime, "attach_usage_sink"):
+        runtime.attach_usage_sink(store.record_usage)  # 세션 누적 토큰 계측 (§11.1)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
