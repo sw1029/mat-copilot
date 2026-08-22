@@ -2,7 +2,7 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 문서 버전 | v0.1 (Draft) |
+| 문서 버전 | v0.2 (Draft) |
 | 문서 상태 | Draft |
 | 작성자 | @sw1029 |
 | 검토자 | 프론트엔드 / 백엔드 / AI / QA / 보안 담당자 |
@@ -52,6 +52,8 @@
 | CON-05 | AI | 백엔드는 Copilot SDK와 Microsoft Agent Framework를 핵심 로직에 사용한다. | 프론트는 AI 산출 고지와 오류 표면화 담당 | 확정 |
 | ASM-01 | API | SCHEMA v0.3 결정 패키지를 최종 계약으로 본다. | 기존 PRD/front v0.1 충돌 내용 무시 | 확정 |
 | ASM-02 | 브라우저 | 최신 Chrome/Edge/Firefox 최근 2개 버전을 지원한다. | ES2022, Fetch, AbortController 사용 | 확정 |
+
+| ASM-06 | 가정 | TRD 생성 여부는 결과물 제출 응답(`needsTrd`) 또는 보고서 응답의 TRD 포함 여부로 판별 가능 | TRD 패널·단계 UI의 조건부 렌더링 기준 | 확인 필요 (SCHEMA 반영 대기) |
 
 ### 1.4 용어 정의
 
