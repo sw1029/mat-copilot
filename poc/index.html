@@ -101,6 +101,16 @@
   .submit-btn:hover:not(:disabled){transform:translateY(-1px); box-shadow:0 9px 24px rgba(108,140,255,.5);}
   .submit-btn:disabled{opacity:.4; cursor:not-allowed; box-shadow:none;}
 
+  /* ---------- optional doc upload ---------- */
+  .upload-card{
+    width:460px; max-width:92vw; display:flex; align-items:center; gap:10px;
+    background:rgba(27,31,46,.6); border:1px dashed var(--line); border-radius:12px;
+    padding:11px 14px; font-size:12.5px; color:var(--sub); line-height:1.5;
+    animation:floatIn .7s .15s ease both;
+  }
+  .upload-card .ok{color:var(--good);}
+  .upload-card .dl-btn{flex:0 0 auto; white-space:nowrap;}
+
   /* ---------- interview canvas ---------- */
   .canvas-wrap{position:absolute; inset:0; overflow:hidden; cursor:grab; touch-action:none;}
   .canvas-wrap.dragging{cursor:grabbing;}
@@ -209,6 +219,11 @@
   .col-docs{width:30%; min-width:320px; border-right:1px solid var(--line); display:flex; flex-direction:column;}
   .doc-panel{flex:1 1 50%; min-height:0; display:flex; flex-direction:column; overflow:hidden;}
   .doc-panel + .doc-panel{border-top:1px solid var(--line);}
+  .no-trd{
+    flex:0 0 auto; border-top:1px solid var(--line); background:var(--bg2);
+    padding:12px 16px; font-size:12.5px; color:var(--sub); line-height:1.6;
+    animation:floatIn .5s both;
+  }
   .doc-head{
     flex:0 0 auto; display:flex; align-items:center; gap:9px; padding:10px 14px;
     border-bottom:1px solid var(--line); background:var(--bg2);
@@ -250,30 +265,31 @@
   sup.fn.sel{outline:2px solid var(--accent); outline-offset:1px;}
 
   .col-right{flex:1; display:flex; flex-direction:column; min-width:0;}
-  .metrics-area{flex:1 1 70%; min-height:0; overflow-y:auto; padding:20px 24px;}
+  .metrics-area{flex:1 1 40%; min-height:0; overflow:hidden; padding:14px 20px; display:flex; flex-direction:column;}
   .metrics-title{font-size:15px; font-weight:800; margin-bottom:3px;}
-  .metrics-sub{font-size:12px; color:var(--sub); margin-bottom:16px;}
-  .metric-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:13px;}
+  .metrics-sub{font-size:12px; color:var(--sub); margin-bottom:10px;}
+  .metric-grid{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:10px; flex:1; min-height:0; align-items:stretch;}
   .metric-card{
     background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-    padding:15px 16px; cursor:pointer; transition:transform .25s, border-color .25s, box-shadow .25s; position:relative;
-    animation:floatIn .5s both;
+    padding:11px 12px; cursor:pointer; transition:transform .25s, border-color .25s, box-shadow .25s; position:relative;
+    animation:floatIn .5s both; min-width:0; display:flex; flex-direction:column; justify-content:center;
   }
   .metric-card:hover{transform:translateY(-3px); border-color:#3d4a75;}
   .metric-card.sel{border-color:var(--accent); box-shadow:0 0 0 3px rgba(108,140,255,.15);}
-  .metric-label{font-size:12px; color:var(--sub); display:flex; align-items:center; gap:6px;}
+  .metric-label{font-size:11px; color:var(--sub); display:flex; align-items:center; gap:5px; white-space:nowrap; overflow:hidden;}
+  .metric-label .lbl{overflow:hidden; text-overflow:ellipsis;}
   .info-dot{
     width:14px;height:14px;border-radius:50%;border:1px solid var(--sub);color:var(--sub);
     font-size:9px;display:inline-flex;align-items:center;justify-content:center; cursor:help; flex:0 0 14px;
   }
-  .metric-value{font-size:27px; font-weight:800; margin:7px 0 2px; letter-spacing:-.5px; font-variant-numeric:tabular-nums;}
-  .metric-value .unit{font-size:13px; color:var(--sub); font-weight:600; margin-left:3px;}
-  .metric-status{font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:99px;}
+  .metric-value{font-size:clamp(15px, 1.5vw, 22px); font-weight:800; margin:6px 0 2px; letter-spacing:-.5px; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .metric-value .unit{font-size:11px; color:var(--sub); font-weight:600; margin-left:2px;}
+  .metric-status{font-size:10.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:99px; white-space:nowrap; align-self:flex-start;}
   .metric-status.good{background:rgba(62,207,142,.13); color:var(--good);}
   .metric-status.warn{background:rgba(245,166,35,.13); color:var(--warn);}
   .metric-status.bad{background:rgba(255,93,108,.13); color:var(--bad);}
   .metric-status.na{background:rgba(122,134,168,.15); color:var(--na);}
-  .metric-bar{height:6px; border-radius:99px; background:#262d47; margin-top:11px; overflow:hidden;}
+  .metric-bar{height:6px; border-radius:99px; background:#262d47; margin-top:8px; overflow:hidden;}
   .metric-bar > div{height:100%; border-radius:99px; transition:width 1.1s cubic-bezier(.2,.8,.3,1);}
   .metric-bar .good{background:linear-gradient(90deg,#2aa671,var(--good));}
   .metric-bar .warn{background:linear-gradient(90deg,#c47f11,var(--warn));}
@@ -287,7 +303,7 @@
   .metric-card:hover .metric-tip{opacity:1; transform:none;}
 
   .report-area{
-    flex:1 1 30%; min-height:0; border-top:1px solid var(--line); background:var(--bg2);
+    flex:1 1 60%; min-height:0; border-top:1px solid var(--line); background:var(--bg2);
     display:flex; flex-direction:column; overflow:hidden;
   }
   .report-head{flex:0 0 auto; padding:10px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px;}
@@ -367,6 +383,16 @@ const mockApi = {
     const nextId = ORDER[idx+1];
     return nextId ? {done:false, next:QUESTIONS[nextId]} : {done:true, next:null};
   },
+  async preprocessDoc(fileName){
+    await delay(1300); // 기획안 전처리(agent 추출) 시뮬레이션
+    return {ok:true, extracted:'초기 기획 항목 12건 추출 · 정규화 schema 적용 완료'};
+  },
+  async submitResult(text){
+    await delay(1000);
+    // 백엔드 판단 시뮬레이션: 결과물에 기술 요소가 있으면 TRD(기술 개요)도 생성
+    const needsTrd = /https?:|github|코드|기술|api|서버|배포|앱|개발|db|데이터베이스/i.test(text);
+    return {accepted:true, needsTrd};
+  },
 };
 
 /* ---- 분석 결과 mock (각주 토큰: [[번호:강조할 구간]]) ---- */
@@ -442,6 +468,38 @@ const COMPARISONS = [
    recommendation:'해당 API를 M2 이후로 이관하거나 PRD에 요구사항으로 승격 후 재합의하세요.', confidence:0.79},
 ];
 
+/* ---- TRD가 생성되지 않은 세션용 비교 데이터 (PRD ↔ 최종 결과물) ---- */
+const COMPARISONS_RESULT = [
+  {id:'c1', fn:1, title:'핵심 가치 구현', status:'일치', statusKey:'match', severity:'low',
+   summary:'PRD의 핵심 가치(질문 기반 구체화 + 문서 자동 생성)가 최종 결과물에 구현되어 있습니다.',
+   reason:'결과물의 인터뷰 흐름과 문서 생성 기능이 PRD §1의 두 축과 대응합니다.',
+   impact:'초기 의도가 결과물에 보존됨. 위험 없음.',
+   prdQuote:'대화형 질문으로 모호한 아이디어를 구체화하고 PRD·TRD 문서를 자동 생성',
+   trdQuote:'인터뷰 → 문서 생성 → 결과 확인 흐름 구현 확인',
+   recommendation:'현행 유지. 이후 확장 시에도 두 축의 분리를 유지하세요.', confidence:0.9},
+  {id:'c2', fn:2, title:'사용자 범위 축소', status:'부분 일치', statusKey:'partial', severity:'medium',
+   summary:'PRD는 "PM과 1인 개발자"를 정의했으나 결과물은 PM 시나리오만 구현되었습니다.',
+   reason:'결과물에서 1인 개발자향 흐름(코드 결과물 분석 등)이 발견되지 않았습니다.',
+   impact:'1인 개발자 세그먼트의 핵심 시나리오가 누락될 수 있음.',
+   prdQuote:'초기 기획 단계의 PM과 1인 개발자',
+   trdQuote:'PM 대상 화면 흐름만 확인됨',
+   recommendation:'1인 개발자 시나리오를 결과물에 추가하거나 PRD 사용자 범위를 축소해 정합시키세요.', confidence:0.82},
+  {id:'c3', fn:3, title:'접근성 요구사항 누락', status:'누락', statusKey:'missing', severity:'high',
+   summary:'PRD가 명시한 접근성(WCAG 2.1 AA, 키보드 흐름) 요구가 결과물에서 확인되지 않습니다.',
+   reason:'결과물 전반에서 키보드 탐색·포커스 관리·ARIA 처리가 발견되지 않음 (한쪽에만 존재).',
+   impact:'품질 요구 위반 가능. 접근성이 후처리로 밀릴 위험이 높음.',
+   prdQuote:'키보드만으로 전체 흐름을 수행할 수 있는 접근성(WCAG 2.1 AA)',
+   trdQuote:'(대응 구간 없음 — 결과물에 부재)',
+   recommendation:'포커스 관리, ARIA 라벨, 키보드 테스트 기준을 결과물에 반영하세요.', confidence:0.89},
+  {id:'c4', fn:4, title:'실시간 의도 왜곡', status:'왜곡', statusKey:'distortion', severity:'high',
+   summary:'PRD의 "실시간 질문 생성" 의도가 결과물에서는 주기적 폴링 방식으로 변형되었습니다.',
+   reason:'PRD §3은 즉시성을 명시했으나 결과물은 일정 주기 갱신으로 동작 — 응답 대기 시간이 의도와 상충.',
+   impact:'대화형 UX의 핵심(즉각적 다음 질문)이 훼손되어 이탈률 상승 가능.',
+   prdQuote:'답변 제출 즉시 실시간으로 다음 질문을 생성',
+   trdQuote:'답변 후 일정 주기 폴링으로 다음 질문 갱신',
+   recommendation:'스트리밍(SSE) 기반 동기 응답으로 변경하거나 지연 상한을 PRD와 합의하세요.', confidence:0.86},
+];
+
 const METRICS = [
   {id:'m1', label:'의도 정합성 점수', value:82, unit:'/100', max:100, status:'good',
    desc:'인터뷰에서 추출한 의도 항목 중 TRD에 왜곡 없이 반영된 비율 기반 점수. (개수 기반 정량 + 정성 보정)', rel:['c1','c2']},
@@ -451,19 +509,34 @@ const METRICS = [
    desc:'PRD 요구 9건 중 TRD가 커버한 7건의 비율. 누락 2건: 접근성, 다운로드 상세.', rel:['c3']},
   {id:'m4', label:'PRD·TRD 일치율', value:71, unit:'%', max:100, status:'warn',
    desc:'전체 대응 구간 대비 "일치" 판정 구간의 비율. 부분 일치·왜곡·추가 항목이 감점 요인.', rel:['c1','c2','c4','c5']},
-  {id:'m5', label:'토큰 사용량 (입력/출력)', value:12480, value2:8732, unit:'tok', status:'na', naLabel:'정보',
-   desc:'문서 생성 및 분석에 사용된 LLM 입력/출력 토큰 총량. 비용 추정의 기초 데이터.', rel:[]},
-  {id:'m6', label:'토큰 효율성', value:0.86, unit:'', max:1, status:'good', decimals:2,
-   desc:'유효 산출 토큰 ÷ 총 사용 토큰. 재시도·중복 생성 없이 사용된 비율.', rel:[]},
-  {id:'m7', label:'할루시네이션 지수', value:null, unit:'', status:'na',
-   desc:'외부 결과물(코드/링크)이 제출되지 않아 산정할 수 없습니다. 0점이 아닌 "산정 불가"입니다.', rel:[]},
+  {id:'m7', label:'할루시네이션 지수', value:6, unit:'/100', max:100, status:'good',
+   desc:'제출된 최종 결과물에서 의도에 근거 없는 내용이 발견된 비율. 낮을수록 좋습니다.', rel:[]},
 ];
 
-const STAGES = [
-  {key:'prd', title:'PRD 생성', subs:['답변 정규화 중 (schema/tag 적용)…','핵심 의도 추출 중…','PRD 섹션 작성 중…']},
-  {key:'trd', title:'TRD 생성', subs:['PRD 요구사항 매핑 중…','기술 스택 결정 중…','TRD 섹션 작성 중…']},
-  {key:'analyze', title:'PRD·TRD 비교 분석', subs:['대응 구간 정렬 중…','테마별 drift agent 실행 중…','정량 집계 및 보고서 생성 중…']},
-];
+/* ---- 백엔드 응답 시뮬레이션: TRD 포함 여부에 따라 문서/비교/지표 구성이 달라짐 ---- */
+function getAnalysis(needsTrd){
+  if(needsTrd){
+    return {prd:PRD_MD, trd:TRD_MD, comparisons:COMPARISONS, metrics:METRICS, docBLabel:'TRD',
+      summaryText:'총 5개 대응 구간 — 일치 1 · 부분 일치 1 · 왜곡 1 · 누락 1 · 추가 1. 가장 심각한 항목은 실시간→배치 처리 왜곡입니다.'};
+  }
+  return {prd:PRD_MD, trd:null, comparisons:COMPARISONS_RESULT,
+    metrics:METRICS.filter(m => m.id !== 'm4')
+      .map(m => Object.assign({}, m, {desc: m.desc.replace(/TRD가/g, '결과물이').replace(/TRD/g, '결과물')})),
+    docBLabel:'결과물',
+    summaryText:'총 4개 대응 구간 — 일치 1 · 부분 일치 1 · 왜곡 1 · 누락 1. 가장 심각한 항목은 실시간 의도 왜곡입니다.'};
+}
+
+function getStages(needsTrd){
+  const stages = [
+    {key:'prd', title:'PRD 생성', subs:['답변 정규화 중 (schema/tag 적용)…','핵심 의도 추출 중…','PRD 섹션 작성 중…']},
+  ];
+  if(needsTrd) stages.push(
+    {key:'trd', title:'TRD 생성 (기술 개요 필요 판단)', subs:['PRD 요구사항 매핑 중…','기술 스택 결정 중…','TRD 섹션 작성 중…']});
+  stages.push(
+    {key:'analyze', title: needsTrd ? 'PRD·TRD·결과물 비교 분석' : 'PRD·결과물 비교 분석',
+     subs:['대응 구간 정렬 중…','테마별 drift agent 실행 중…','정량 집계 및 보고서 생성 중…']});
+  return stages;
+}
 
 /* ---- 새로고침 복구용 저장소 (FR-10) ---- */
 const STORE_KEY = 'mat-copilot-poc';
@@ -585,15 +658,39 @@ function AnswerForm({onSubmit, sending, compact}){
 /* =====================================================================
  * 화면 1 — 홈 / 첫 질문
  * ===================================================================== */
-function HomeScreen({question, onSubmit, sending, loading}){
+function HomeScreen({question, onSubmit, sending, loading, doc, onUpload}){
+  const fileRef = useRef(null);
   return (
     <div className="screen home">
       <div>
         <div className="hero-title">아이디어를 문서로, 의도 그대로.</div>
         <div className="hero-sub" style={{marginTop:10}}>
-          한 번에 하나의 질문으로 아이디어를 구체화하고, 생성된 PRD·TRD의 의도 왜곡을 분석해 드립니다.
+          한 번에 하나의 질문으로 아이디어를 구체화하고, 생성된 문서와 최종 결과물의 의도 왜곡을 분석해 드립니다.
         </div>
       </div>
+
+      {/* Input 1 (선택) — 기존 계획 문서 업로드 → 전처리 */}
+      <div className="upload-card no-drag">
+        <input ref={fileRef} type="file" accept=".docx,.txt,.md" style={{display:'none'}}
+          onChange={e=>{ const f = e.target.files && e.target.files[0]; if(f) onUpload(f.name); }} />
+        {doc.status === 'none' && (
+          <React.Fragment>
+            <span>📄 기존에 쓴 계획 문서가 있나요? <b>(선택)</b> — docx/txt/md를 올리면 전처리해 분석 기준으로 저장합니다.</span>
+            <button className="dl-btn" onClick={()=>fileRef.current && fileRef.current.click()}>파일 선택</button>
+          </React.Fragment>
+        )}
+        {doc.status === 'processing' && (
+          <React.Fragment>
+            <div className="spinner" style={{flex:'0 0 18px'}}></div>
+            <span><b>{doc.name}</b> 전처리 중 — 초기 기획 추출…</span>
+          </React.Fragment>
+        )}
+        {doc.status === 'done' && (
+          <span className="ok">✓ <b>{doc.name}</b> 전처리 완료 — {doc.extracted}</span>
+        )}
+      </div>
+
+      {/* Input 2 (필수) — 유저 채팅 */}
       {loading ? (
         <div className="qcard">
           <div className="sk-line" style={{width:'55%'}}></div>
@@ -611,6 +708,49 @@ function HomeScreen({question, onSubmit, sending, loading}){
           <AnswerForm onSubmit={onSubmit} sending={sending} />
         </div>
       )}
+    </div>
+  );
+}
+
+/* =====================================================================
+ * 화면 2.5 — 최종 결과물 제출 (질문 종료 후)
+ * ===================================================================== */
+function SubmitScreen({onSubmit, sending}){
+  const [value, setValue] = useState('');
+  const [fileName, setFileName] = useState(null);
+  const fileRef = useRef(null);
+  const valid = value.trim().length >= 2 || fileName;
+  const submit = () => { if(valid && !sending) onSubmit((value.trim() + ' ' + (fileName || '')).trim()); };
+  return (
+    <div className="screen home">
+      <div>
+        <div className="hero-title" style={{fontSize:26}}>인터뷰 완료! 최종 결과물을 제출해 주세요</div>
+        <div className="hero-sub" style={{marginTop:8}}>
+          제출된 결과물을 기준으로 의도 대비 drift를 분석합니다 · 기술 요소가 확인되면 백엔드가 TRD(기술 개요)도 함께 생성합니다
+        </div>
+      </div>
+      <div className="qcard">
+        <div className="badge-row">
+          <span className="badge req">필수</span>
+          <span className="badge step">최종 결과물</span>
+        </div>
+        <h3>결과물 링크 또는 파일을 제출해 주세요</h3>
+        <div className="helper">웹 페이지·GitHub 링크를 붙여넣거나, zip/docx/문서/코드 파일을 첨부할 수 있어요.</div>
+        <textarea className="answer" value={value} disabled={sending}
+          placeholder="예) https://github.com/my-org/my-app 또는 결과물 설명…"
+          onChange={e=>setValue(e.target.value)}
+          onKeyDown={e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); } }} />
+        <div className="qcard-foot">
+          <input ref={fileRef} type="file" style={{display:'none'}}
+            onChange={e=>{ const f = e.target.files && e.target.files[0]; if(f) setFileName(f.name); }} />
+          <button className="dl-btn" disabled={sending} onClick={()=>fileRef.current && fileRef.current.click()}>
+            {fileName ? '📎 ' + fileName : '📎 파일 첨부'}
+          </button>
+          <button className="submit-btn" disabled={!valid || sending} onClick={submit}>
+            {sending ? '제출 중…' : '제출하고 분석 시작'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -775,7 +915,7 @@ function InterviewScreen({visible, answers, activeId, sending, onSubmit, expande
 /* =====================================================================
  * 화면 3 — 문서 생성 및 분석 대기
  * ===================================================================== */
-function WaitingScreen({completed, running, failed, progress, subIdx, onRetry}){
+function WaitingScreen({stages, completed, running, failed, progress, subIdx, onRetry}){
   return (
     <div className="screen waiting">
       <div style={{textAlign:'center'}}>
@@ -785,7 +925,7 @@ function WaitingScreen({completed, running, failed, progress, subIdx, onRetry}){
         </div>
       </div>
       <div className="stages">
-        {STAGES.map((st, i) => {
+        {stages.map((st, i) => {
           const isDone = completed.includes(st.key);
           const isRun = running === st.key && !failed;
           const isFail = failed === st.key;
@@ -795,7 +935,7 @@ function WaitingScreen({completed, running, failed, progress, subIdx, onRetry}){
                 <div className="stage-icon">
                   {isDone ? '✓' : isFail ? '✕' : isRun ? <div className="spinner"></div> : i+1}
                 </div>
-                {i < STAGES.length-1 && <div className="stage-line"></div>}
+                {i < stages.length-1 && <div className="stage-line"></div>}
               </div>
               <div className="stage-body">
                 <div className="stage-title">{st.title}</div>
@@ -816,10 +956,7 @@ function WaitingScreen({completed, running, failed, progress, subIdx, onRetry}){
 /* =====================================================================
  * 화면 4 — 분석 결과 (좌 30 : 우 70, 우측 상 70 : 하 30)
  * ===================================================================== */
-const FN_STATUS = {};
-COMPARISONS.forEach(c => { FN_STATUS[c.fn] = c.statusKey; });
-
-function DocPanel({title, md, filename, selectedFn, onFn}){
+function DocPanel({title, md, filename, fnStatus, selectedFn, onFn}){
   const bodyRef = useRef(null);
   useEffect(() => {
     if(selectedFn == null || !bodyRef.current) return;
@@ -834,7 +971,7 @@ function DocPanel({title, md, filename, selectedFn, onFn}){
         <button className="dl-btn" onClick={()=>downloadMd(filename, md)}>⬇ .md 다운로드</button>
       </div>
       <div className="doc-body" ref={bodyRef}>
-        <Markdown md={md} fnStatus={FN_STATUS} selectedFn={selectedFn} onFn={onFn} />
+        <Markdown md={md} fnStatus={fnStatus} selectedFn={selectedFn} onFn={onFn} />
       </div>
     </div>
   );
@@ -855,9 +992,9 @@ function MetricCard({m, i, selected, onSelect}){
       style={{animationDelay:(i*0.07)+'s'}}
       onClick={()=>{ if(m.rel.length) onSelect(m); }}>
       <div className="metric-tip">{m.desc}</div>
-      <div className="metric-label">{m.label} <span className="info-dot">i</span></div>
+      <div className="metric-label"><span className="lbl">{m.label}</span> <span className="info-dot">i</span></div>
       <div className="metric-value">
-        {m.value == null ? <span style={{color:'var(--na)', fontSize:19}}>산정 불가</span> : (
+        {m.value == null ? <span style={{color:'var(--na)', fontSize:15}}>산정 불가</span> : (
           <React.Fragment>
             {fmt(raw)}
             {m.value2 != null && <span> / {Math.round(raw2).toLocaleString()}</span>}
@@ -875,12 +1012,12 @@ function MetricCard({m, i, selected, onSelect}){
   );
 }
 
-function ReportPanel({comp, onGoto}){
+function ReportPanel({comp, docBLabel, summaryText, onGoto}){
   if(!comp) return (
     <div className="report-body report-empty">
       좌측 문서의 <sup className="fn st-distortion" style={{cursor:'default'}}>4</sup> 각주 번호나 상단 지표 카드를 선택하면
       해당 차이의 근거·영향·개선 제안이 여기에 표시됩니다.<br/>
-      요약: 총 5개 대응 구간 — 일치 1 · 부분 일치 1 · 왜곡 1 · 누락 1 · 추가 1. 가장 심각한 항목은 <b>실시간→배치 처리 왜곡</b>입니다.
+      요약: {summaryText}
     </div>
   );
   const stCls = {match:'good', partial:'warn', distortion:'bad', missing:'bad', added:'warn'}[comp.statusKey];
@@ -899,7 +1036,7 @@ function ReportPanel({comp, onGoto}){
         <div className="rp-item"><div className="k">판단 근거</div><div className="v">{comp.reason}</div></div>
         <div className="rp-item"><div className="k">의도에 미치는 영향</div><div className="v">{comp.impact}</div></div>
         <div className="rp-item"><div className="k">PRD 인용</div><div className="quote">{comp.prdQuote}</div></div>
-        <div className="rp-item"><div className="k">TRD 인용</div><div className="quote trd">{comp.trdQuote}</div></div>
+        <div className="rp-item"><div className="k">{docBLabel} 인용</div><div className="quote trd">{comp.trdQuote}</div></div>
         <div className="rp-item"><div className="k">개선 제안</div><div className="v">💡 {comp.recommendation}</div></div>
         <div className="rp-item">
           <div className="k">분석 신뢰도</div>
@@ -913,15 +1050,27 @@ function ReportPanel({comp, onGoto}){
   );
 }
 
-function ResultScreen(){
+function ResultScreen({needsTrd}){
   const [selectedFn, setSelectedFn] = useState(null);
-  const comp = COMPARISONS.find(c => c.fn === selectedFn) || null;
+  // 백엔드가 넘겨주는 분석 결과를 그대로 렌더링 (TRD 포함 여부도 백엔드 응답 기준)
+  const analysis = useMemo(() => getAnalysis(needsTrd), [needsTrd]);
+  const fnStatus = useMemo(() => {
+    const map = {}; analysis.comparisons.forEach(c => { map[c.fn] = c.statusKey; });
+    return map;
+  }, [analysis]);
+  const comp = analysis.comparisons.find(c => c.fn === selectedFn) || null;
   const selectFn = (fn) => setSelectedFn(prev => prev === fn ? null : fn);
   return (
     <div className="screen result">
       <div className="col-docs">
-        <DocPanel title="PRD" md={PRD_MD} filename="prd.md" selectedFn={selectedFn} onFn={selectFn} />
-        <DocPanel title="TRD" md={TRD_MD} filename="trd.md" selectedFn={selectedFn} onFn={selectFn} />
+        <DocPanel title="PRD" md={analysis.prd} filename="prd.md" fnStatus={fnStatus} selectedFn={selectedFn} onFn={selectFn} />
+        {analysis.trd ? (
+          <DocPanel title="TRD" md={analysis.trd} filename="trd.md" fnStatus={fnStatus} selectedFn={selectedFn} onFn={selectFn} />
+        ) : (
+          <div className="no-trd">
+            ℹ TRD 미생성 — 백엔드 판단 결과, 이 프로젝트는 기술 개요 문서가 필요하지 않습니다.
+          </div>
+        )}
       </div>
       <div className="col-right">
         <div className="metrics-area">
@@ -930,11 +1079,11 @@ function ResultScreen(){
             지표 카드에 마우스를 올리면 산식 설명을 볼 수 있어요 · 카드를 클릭하면 관련 차이 항목으로 연결됩니다 ·
             분석 결과는 AI 판정으로 참고용입니다
           </div>
-          <div className="metric-grid">
-            {METRICS.map((m, i) => (
+          <div className="metric-grid" style={{gridTemplateColumns:'repeat(' + analysis.metrics.length + ', minmax(0,1fr))'}}>
+            {analysis.metrics.map((m, i) => (
               <MetricCard key={m.id} m={m} i={i}
                 selected={comp != null && m.rel.indexOf(comp.id) >= 0}
-                onSelect={(mm)=>{ const c = COMPARISONS.find(cc=>cc.id===mm.rel[0]); if(c) selectFn(c.fn); }} />
+                onSelect={(mm)=>{ const c = analysis.comparisons.find(cc=>cc.id===mm.rel[0]); if(c) selectFn(c.fn); }} />
             ))}
           </div>
         </div>
@@ -943,7 +1092,8 @@ function ResultScreen(){
             <span className="t">차이 상세 리포트</span>
             {comp && <button className="dl-btn" onClick={()=>setSelectedFn(null)}>선택 해제</button>}
           </div>
-          <ReportPanel comp={comp} onGoto={(fn)=>setSelectedFn(fn)} />
+          <ReportPanel comp={comp} docBLabel={analysis.docBLabel} summaryText={analysis.summaryText}
+            onGoto={(fn)=>setSelectedFn(fn)} />
         </div>
       </div>
     </div>
@@ -956,6 +1106,7 @@ function ResultScreen(){
 const PHASES = [
   {key:'INITIAL', label:'홈'},
   {key:'INTERVIEWING', label:'인터뷰'},
+  {key:'SUBMIT', label:'결과물 제출'},
   {key:'WAITING', label:'문서 생성'},
   {key:'COMPLETED', label:'분석 결과'},
 ];
@@ -969,6 +1120,10 @@ function App(){
   const [sending, setSending] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [showLeave, setShowLeave] = useState(false);
+  // Input 1 (선택) — 기존 계획 문서
+  const [doc, setDoc] = useState((saved && saved.doc) || {status:'none', name:null, extracted:null});
+  // 백엔드 판단: TRD 생성 여부
+  const [needsTrd, setNeedsTrd] = useState(saved ? !!saved.needsTrd : true);
 
   // 대기 화면 상태 (완료 단계는 복구 — FR-10 / 수용기준 14)
   const [completed, setCompleted] = useState((saved && saved.completed) || []);
@@ -987,8 +1142,8 @@ function App(){
 
   // 상태 영속화 (새로고침 복구)
   useEffect(() => {
-    saveState({phase, answers, activeId, completed});
-  }, [phase, answers, activeId, completed]);
+    saveState({phase, answers, activeId, completed, doc, needsTrd});
+  }, [phase, answers, activeId, completed, doc, needsTrd]);
 
   const visible = useMemo(() => {
     const ids = ORDER.filter(id => answers[id] != null || id === activeId);
@@ -1003,7 +1158,7 @@ function App(){
       setAnswers(a => Object.assign({}, a, {[qid]: value}));
       if(res.done){
         setActiveId(null);
-        setPhase('WAITING');
+        setPhase('SUBMIT'); // 질문 종료 → 최종 결과물 제출 단계로
       } else {
         setActiveId(res.next.id);
         setPhase('INTERVIEWING');
@@ -1013,10 +1168,30 @@ function App(){
     }
   };
 
+  const uploadDoc = async (name) => {
+    setDoc({status:'processing', name, extracted:null});
+    const res = await mockApi.preprocessDoc(name);
+    setDoc({status:'done', name, extracted:res.extracted});
+  };
+
+  const submitResult = async (text) => {
+    if(sending) return;
+    setSending(true);
+    try{
+      const res = await mockApi.submitResult(text); // 백엔드가 TRD 필요 여부 판단
+      setNeedsTrd(res.needsTrd);
+      setPhase('WAITING');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const stages = useMemo(() => getStages(needsTrd), [needsTrd]);
+
   // 생성/분석 job 실행 (단계 순차 진행, 완료 단계는 재실행하지 않음)
   useEffect(() => {
     if(phase !== 'WAITING' || failed) return;
-    const next = STAGES.find(s => completed.indexOf(s.key) < 0);
+    const next = stages.find(s => completed.indexOf(s.key) < 0);
     if(!next){ const t = setTimeout(()=>setPhase('COMPLETED'), 500); return ()=>clearTimeout(t); }
     setRunning(next.key); setProgress(0);
     const dur = 2600;
@@ -1031,15 +1206,16 @@ function App(){
     }, 60);
     const sv = setInterval(() => setSubIdx(i => i+1), 900);
     return () => { clearInterval(iv); clearInterval(sv); };
-  }, [phase, completed, failed]);
+  }, [phase, completed, failed, stages]);
 
   const goHome = () => {
     clearState();
     setAnswers({}); setActiveId(null); setCompleted([]); setFailed(null);
+    setDoc({status:'none', name:null, extracted:null}); setNeedsTrd(true);
     setFirstQ(null); setPhase('INITIAL'); setShowLeave(false);
   };
   const onHomeClick = () => {
-    if(phase === 'INTERVIEWING' || phase === 'WAITING') setShowLeave(true);
+    if(phase === 'INTERVIEWING' || phase === 'SUBMIT' || phase === 'WAITING') setShowLeave(true);
     else goHome();
   };
 
@@ -1065,7 +1241,11 @@ function App(){
       <div className="main">
         {phase === 'INITIAL' && (
           <HomeScreen question={firstQ} loading={!firstQ} sending={sending}
+            doc={doc} onUpload={uploadDoc}
             onSubmit={(v)=>submitAnswer('q1', v)} />
+        )}
+        {phase === 'SUBMIT' && (
+          <SubmitScreen onSubmit={submitResult} sending={sending} />
         )}
         {phase === 'INTERVIEWING' && (
           <InterviewScreen visible={visible} answers={answers} activeId={activeId}
@@ -1073,10 +1253,10 @@ function App(){
             expandedId={expandedId} setExpandedId={setExpandedId} />
         )}
         {phase === 'WAITING' && (
-          <WaitingScreen completed={completed} running={running} failed={failed}
+          <WaitingScreen stages={stages} completed={completed} running={running} failed={failed}
             progress={progress} subIdx={subIdx} onRetry={()=>setFailed(null)} />
         )}
-        {phase === 'COMPLETED' && <ResultScreen />}
+        {phase === 'COMPLETED' && <ResultScreen needsTrd={needsTrd} />}
       </div>
 
       {showLeave && (
