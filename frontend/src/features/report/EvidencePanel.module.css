@@ -1,0 +1,10 @@
+.panel { height: 100%; min-height: 0; overflow-y: auto; background: var(--color-bg-soft); border-top: 1px solid var(--color-border); }
+.header { position: sticky; top: 0; z-index: 1; padding: var(--space-4); background: rgba(250, 248, 255, 0.86); backdrop-filter: blur(10px); border-bottom: 1px solid var(--color-border); }
+.title { margin: 0; font-size: var(--font-size-md); }
+.content { padding: var(--space-4); display: grid; gap: var(--space-3); }
+.hint, .info { color: var(--color-text-muted); font-size: var(--font-size-sm); margin: 0; }
+.info { border: 1px solid var(--color-status-info-border); background: var(--color-status-info-bg); color: var(--color-status-info-fg); border-radius: var(--radius-md); padding: var(--space-3); }
+.list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-3); }
+.artifact { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3); display: grid; gap: var(--space-1); }
+.artifactName { font-weight: 700; }
+.meta { color: var(--color-text-muted); font-size: var(--font-size-sm); }

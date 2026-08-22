@@ -1,0 +1,14 @@
+.panel { height: 100%; min-height: 0; overflow-y: auto; background: var(--color-bg-soft); }
+.header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: var(--space-2); justify-content: space-between; padding: var(--space-4); background: rgba(250, 248, 255, 0.86); backdrop-filter: blur(10px); border-bottom: 1px solid var(--color-border); }
+.titleGroup { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.title { font-size: var(--font-size-md); margin: 0; color: var(--color-text); }
+.content { padding: var(--space-4); display: grid; gap: var(--space-3); }
+.notice { padding: var(--space-3); border: 1px solid var(--color-status-info-border); color: var(--color-status-info-fg); background: var(--color-status-info-bg); border-radius: var(--radius-md); }
+.block { position: relative; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-5) var(--space-4) var(--space-4); box-shadow: var(--shadow-sm); transition: background var(--motion-duration-base), border-color var(--motion-duration-base); }
+.hoverHighlight { background: var(--color-primary-050); }
+.selectedHighlight { background: var(--color-primary-050); border-left: 5px solid var(--color-primary-500); }
+.footnote { position: absolute; top: var(--space-2); right: var(--space-2); min-width: 28px; height: 28px; border-radius: var(--radius-pill); border: 1px solid var(--color-primary-500); background: var(--color-surface); color: var(--color-primary-700); font-weight: 800; cursor: pointer; }
+.footnote:hover, .footnote:focus-visible { background: var(--color-primary-100); box-shadow: var(--focus-ring); outline: none; }
+.markdown { color: var(--color-text); }
+.iconButton { border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-surface); min-width: var(--target-min); min-height: var(--target-min); cursor: pointer; color: var(--color-primary-700); }
+.iconButton:focus-visible { outline: none; box-shadow: var(--focus-ring); }

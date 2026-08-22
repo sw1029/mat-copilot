@@ -1,0 +1,31 @@
+.container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-hero);
+  padding: var(--space-4);
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-8);
+  max-width: 420px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  color: var(--color-text);
+}
+
+.message {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

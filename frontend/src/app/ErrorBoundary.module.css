@@ -1,0 +1,57 @@
+.container {
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-hero);
+  padding: var(--space-4);
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-8);
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  text-align: center;
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  color: var(--color-text);
+}
+
+.message {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.primary,
+.secondary {
+  min-height: var(--target-min);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  border: none;
+  background: var(--gradient-primary);
+  color: var(--color-text-on-primary);
+}
+
+.secondary {
+  border: 1px solid var(--color-primary-300);
+  background: var(--color-surface);
+  color: var(--color-primary-700);
+}
