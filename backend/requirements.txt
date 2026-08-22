@@ -1,0 +1,19 @@
+# Web framework (TRD §3.2 확정: FastAPI)
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+pydantic>=2.7,<3
+python-multipart>=0.0.9
+
+# 필수 스택 (AGENTS.md / TRD CON-01·CON-02)
+agent-framework-core>=1.0,<2      # Microsoft Agent Framework (Python)
+github-copilot-sdk>=1.0,<2        # GitHub Copilot SDK (Python)
+
+# 문서 파서 (TRD §3.2)
+python-docx>=1.1,<2
+
+# Azure (선택 — 미설정 시 비활성, TRD §8.2/§11.1)
+azure-storage-blob>=12.19,<13
+azure-monitor-opentelemetry>=1.6,<2
+
+# HTTP 클라이언트 (테스트·SSRF 가드 재검증)
+httpx>=0.27,<1

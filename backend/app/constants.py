@@ -1,0 +1,55 @@
+"""공유 상수 — SCHEMA §4.1 입력 검증 제약 + TRD §6.5 watchdog 한도.
+
+프론트와 공유되는 검증 상수는 SCHEMA/schema.md §4.1이 SoT다.
+watchdog 한도(TRD §6.5)는 서버 내부 상수로, 조정 시 SCHEMA 변경이 없다.
+"""
+
+# --- SCHEMA §4.1 입력 검증 제약 ---
+ANSWER_MIN_LEN = 1
+ANSWER_MAX_LEN = 2_000
+
+CONFUSE_THRESHOLD_MIN = 0.0
+CONFUSE_THRESHOLD_MAX = 1.0
+CONFUSE_THRESHOLD_STEP = 0.05
+
+TIME_LIMIT_SEC_MIN = 60
+TIME_LIMIT_SEC_MAX = 3_600
+
+PLAN_ALLOWED_EXTENSIONS = {".docx", ".txt", ".md"}  # FR-1 MVP 3종 고정
+PLAN_MAX_BYTES = 10 * 1024 * 1024  # 10MB
+
+ARTIFACT_MAX_BYTES = 20 * 1024 * 1024  # 결과물 개당 20MB
+ARTIFACTS_MAX_COUNT = 20  # 세션당 20건
+ZIP_MAX_TOTAL_BYTES = 100 * 1024 * 1024  # zip 해제 후 총 100MB
+ZIP_MAX_ENTRIES = 1_000
+
+# --- TRD §6.4 confused 산식 기본 가중치 (OQ-05 캘리브레이션 잔여) ---
+CONFUSED_W_AMBIGUITY = 0.4
+CONFUSED_W_INCOMPLETENESS = 0.4
+CONFUSED_W_INCONSISTENCY = 0.2
+DEFAULT_CONFUSE_THRESHOLD = 0.5
+INCONSISTENCY_REVISED_TRIGGER = 0.5  # TRD §6.6 — 초과 시 REVISED 질문 트리거
+
+# --- TRD §6.5 watchdog 한도 (M1 확정, OQ-19) ---
+MAX_DEPTH = 2
+MAX_QUESTIONS = 15
+REQUEST_FLAG_DEPTH_BONUS = 1  # request flag 예외 시 깊이 +1
+MAX_CANDIDATES_PER_TURN = 3  # TRD §6.1 후보 질문 수 상한
+
+# --- TRD §6.1 턴 예산 ---
+LLM_CALL_TIMEOUT_SEC = 15.0
+LLM_RETRY_COUNT = 2  # TRD §11.2 지수 백오프 재시도 기본 2회
+TURN_BUDGET_SEC = 45.0
+
+# --- TRD §8.4 / §10.7 저장소·방어 ---
+SESSION_TTL_HOURS = 24
+SESSION_TTL_REPORT_READY_HOURS = 72
+TTL_SWEEP_INTERVAL_SEC = 300  # 5분 주기
+MAX_ACTIVE_SESSIONS = 500
+RATE_LIMIT_SESSION_CREATE_PER_MINUTE = 5  # API-01 IP당 분당 5회
+
+# --- 컨텍스트 패킷 예산 (TRD §6.1) ---
+CONTEXT_PLAN_SUMMARY_MAX_CHARS = 8_000  # 기획안 요약 ≤2k tokens 근사
+CONTEXT_RECENT_ANSWERS = 5
+
+API_PREFIX = "/api/v1"
