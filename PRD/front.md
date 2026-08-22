@@ -2,10 +2,10 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 문서 버전 | v0.1 (Draft) |
+| 문서 버전 | v0.2 (Draft) |
 | 작성자 | @sw1029 |
 | 최종 수정일 | 2026-08-22 |
-| 관련 문서 | [PRD/back.md](./back.md), [TRD/front.md](../TRD/front.md), [TRD/back.md](../TRD/back.md) |
+| 관련 문서 | [PRD/back.md](./back.md), [PRD/color-system.md](./color-system.md), [TRD/front.md](../TRD/front.md), [TRD/back.md](../TRD/back.md) |
 
 ## 1. 개요 (Overview)
 mat-copilot은 대화형 AI 에이전트가 사용자의 초기 아이디어를 한 번에 하나씩 질문하여 구체화하고, 답변을 바탕으로 PRD와 TRD를 생성한 뒤 두 문서 사이의 의도 왜곡, 요구사항 누락 및 토큰 효율성을 분석·시각화하는 서비스다.
